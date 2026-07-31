@@ -9,7 +9,11 @@ class Ai_messages extends Model
     protected $table = 'ai_messages';
 
     protected $fillable = [
+        'ai_channel_id',
         'user_id',
+        'visitor_id',
+        'ai_conversation_id',
+        'recipient_type',
         'type',
         'title',
         'content',
@@ -31,8 +35,33 @@ class Ai_messages extends Model
         'metadata' => 'array',
     ];
 
+    public function aiChannel()
+    {
+        return $this->belongsTo(Ai_channel::class, 'ai_channel_id');
+    }
+
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function visitor()
+    {
+        return $this->belongsTo(Visitor::class);
+    }
+
+    public function aiConversation()
+    {
+        return $this->belongsTo(Ai_conversation::class, 'ai_conversation_id');
+    }
+
+    public function target()
+    {
+        return $this->morphTo('target');
+    }
+
+    public function source()
+    {
+        return $this->morphTo('source');
     }
 }
