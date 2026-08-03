@@ -95,32 +95,32 @@ class Product extends Model
 
     public function stockBatches()
     {
-        return $this->hasMany(Stock_batches::class);
+        return $this->hasMany(stockBatches::class);
     }
 
     public function stockMovements()
     {
-        return $this->hasMany(Stock_movement::class);
+        return $this->hasMany(stockMovements::class);
     }
 
     public function stockAdjustments()
     {
-        return $this->hasMany(Stock_adjustment::class);
+        return $this->hasMany(StockAdjustment::class);
     }
 
     public function stockOpnameItems()
     {
-        return $this->hasMany(Stock_opname_item::class);
+        return $this->hasMany(StockOpnameItem::class);
     }
 
     public function transactionItems()
     {
-        return $this->hasMany(Transaction_item::class);
+        return $this->hasMany(TransactionItem::class);
     }
 
     public function returnItems()
     {
-        return $this->hasMany(Return_item::class);
+        return $this->hasMany(ReturnItem::class);
     }
 
     public function getExpiryTypeLabelAttribute(): string
@@ -195,14 +195,15 @@ class Product extends Model
     }
 
     public function getExpiryStatusClassAttribute(): string
-    {
-        return match ($this->expiry_status) {
-            'expired' => 'status-pill--danger',
-            'grace_period', 'expires_today', 'expiring_soon' => 'status-pill--warning',
-            'safe' => 'status-pill--success',
-            default => 'status-pill--muted',
-        };
-    }
+{
+    return match ($this->expiry_status) {
+        'expired' => 'status-pill--danger',
+        'grace_period' => 'status-pill--grace',
+        'expires_today', 'expiring_soon' => 'status-pill--warning',
+        'safe' => 'status-pill--success',
+        default => 'status-pill--muted',
+    };
+}
 
     public function getExpirySummaryAttribute(): string
     {
