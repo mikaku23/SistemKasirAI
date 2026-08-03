@@ -24,12 +24,15 @@
             <i class="icon fa-solid fa-bell" aria-hidden="true"></i>
             <span class="badge badge--hot">3</span>
           </button>
-          <div class="profile-chip">
-            <div class="avatar">A</div>
-            <div>
-              <strong>Admin</strong>
-              <small>Super Administrator</small>
-            </div>
-          </div>
+          <form action="{{ route('logout') }}" method="POST" class="profile-chip" style="cursor:pointer;">
+            @csrf
+            <button type="submit" class="icon-btn" style="display:flex; align-items:center; gap:0.75rem; padding:0; border:0; background:transparent; color:inherit;" aria-label="Logout">
+              <div class="avatar">A</div>
+              <div style="text-align:left;">
+                <strong>{{ auth()->user()?->name ?? 'Admin' }}</strong>
+                <small>{{ auth()->user()?->role?->name ?? 'Administrator' }}</small>
+              </div>
+            </button>
+          </form>
         </div>
       </header>

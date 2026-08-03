@@ -15,14 +15,14 @@
   <nav class="sidebar-nav" aria-label="Sidebar navigation">
     <div class="nav-group" data-group="gateway">
       <p class="nav-group__label">Gateway</p>
-      <a href="{{ route('dashboard') }}" class="nav-item {{ $menu == 'dashboard' ? 'active' : '' }}">
+      <a href="{{ route('dashboardadmin') }}" class="nav-item {{ $menu == 'dashboard' ? 'active' : '' }}">
         <i class="icon fa-solid fa-gauge-high" aria-hidden="true"></i><span>Dashboard</span>
       </a>
     </div>
 
     <div class="nav-group" data-group="users">
       <p class="nav-group__label">Users</p>
-      <a href="#" class="nav-item {{ $menu == 'users' ? 'active' : '' }}">
+      <a href="{{ route('users.index') }}" class="nav-item {{ $menu == 'users' ? 'active' : '' }}">
         <i class="icon fa-solid fa-users" aria-hidden="true"></i><span>Users</span>
       </a>
       <a href="{{ route('roles.index') }}" class="nav-item {{ $menu == 'roles' ? 'active' : '' }}">

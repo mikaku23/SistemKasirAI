@@ -20,16 +20,12 @@ class User extends Authenticatable
         'name',
         'username',
         'email',
-        'nim',
-        'nip',
         'no_hp',
         'password',
         'security_question',
         'security_answer',
-        'qr_code',
-        'qr_url',
         'avatar',
-        'email_verified_at',
+        'is_active',
         'last_login_at',
         'last_password_changed_at',
         'remember_token',
@@ -41,7 +37,7 @@ class User extends Authenticatable
     ];
 
     protected $casts = [
-        'email_verified_at' => 'datetime',
+        'is_active' => 'boolean',
         'last_login_at' => 'datetime',
         'last_password_changed_at' => 'datetime',
         'password' => 'hashed',
@@ -114,5 +110,14 @@ class User extends Authenticatable
         return Str::length($initials) > 1
             ? Str::substr($initials, 0, 1).Str::substr($initials, -1)
             : $initials;
+    }
+
+    public function hasPermission(string $permission): bool
+    {
+        if (! $this->relationLoaded('role')) {
+            $this->load('role.permissions');
+        }
+
+        return $this->role?->permissions()->where('slug', $permission)->exists() ?? false;
     }
 }

@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 
 class UserUpdateRequest extends FormRequest
@@ -26,13 +27,13 @@ class UserUpdateRequest extends FormRequest
             'no_hp' => trim((string) $this->input('no_hp')),
             'security_question' => trim((string) $this->input('security_question')),
             'security_answer' => trim((string) $this->input('security_answer')),
-            'qr_code' => trim((string) $this->input('qr_code')),
-            'qr_url' => trim((string) $this->input('qr_url')),
-            'email_verified_at' => trim((string) $this->input('email_verified_at')),
             'last_login_at' => trim((string) $this->input('last_login_at')),
             'last_password_changed_at' => trim((string) $this->input('last_password_changed_at')),
-            'is_active' => $this->boolean('is_active'),
         ]);
+
+        if (Schema::hasColumn('users', 'is_active')) {
+            $this->merge(['is_active' => $this->boolean('is_active')]);
+        }
     }
 
     public function rules(): array
@@ -41,7 +42,7 @@ class UserUpdateRequest extends FormRequest
         $user = $this->route('user');
         $userId = $user instanceof User ? $user->id : $user;
 
-        return [
+        $rules = [
             'id' => ['nullable', 'integer'],
             'role_id' => ['required', 'integer', 'exists:roles,id'],
             'location_id' => ['nullable', 'integer', 'exists:locations,id'],
@@ -58,30 +59,20 @@ class UserUpdateRequest extends FormRequest
                 'max:190',
                 Rule::unique('users', 'email')->ignore($userId),
             ],
-            'nim' => [
-                'nullable',
-                'string',
-                'max:50',
-                Rule::unique('users', 'nim')->ignore($userId),
-            ],
-            'nip' => [
-                'nullable',
-                'string',
-                'max:50',
-                Rule::unique('users', 'nip')->ignore($userId),
-            ],
             'no_hp' => ['required', 'string', 'max:25'],
             'password' => ['nullable', 'string', 'min:8', 'max:255'],
             'security_question' => ['nullable', 'string', 'max:255'],
             'security_answer' => ['nullable', 'string', 'max:255'],
-            'qr_code' => ['nullable', 'string', 'max:255'],
-            'qr_url' => ['nullable', 'string', 'max:255'],
             'avatar' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:3072'],
-            'email_verified_at' => ['nullable', 'date'],
             'last_login_at' => ['nullable', 'date'],
             'last_password_changed_at' => ['nullable', 'date'],
-            'is_active' => ['required', 'boolean'],
         ];
+
+        if (Schema::hasColumn('users', 'is_active')) {
+            $rules['is_active'] = ['required', 'boolean'];
+        }
+
+        return $rules;
     }
 
     public function messages(): array
@@ -93,13 +84,10 @@ class UserUpdateRequest extends FormRequest
             'username.required' => 'Username wajib diisi.',
             'username.unique' => 'Username sudah digunakan.',
             'email.unique' => 'Email sudah digunakan.',
-            'nim.unique' => 'NIM sudah digunakan.',
-            'nip.unique' => 'NIP sudah digunakan.',
             'no_hp.required' => 'Nomor HP wajib diisi.',
             'password.min' => 'Password minimal 8 karakter.',
             'avatar.image' => 'Avatar harus berupa gambar.',
             'avatar.mimes' => 'Avatar harus jpg, jpeg, png, atau webp.',
-            'is_active.required' => 'Status user wajib dipilih.',
         ];
     }
 }

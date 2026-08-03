@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -50,10 +51,12 @@ class UserService
 
     public function stats(): array
     {
+        $hasIsActiveColumn = Schema::hasColumn('users', 'is_active');
+
         return [
             'total' => User::query()->count(),
-            'active' => User::query()->where('is_active', true)->count(),
-            'inactive' => User::query()->where('is_active', false)->count(),
+            'active' => $hasIsActiveColumn ? User::query()->where('is_active', true)->count() : 0,
+            'inactive' => $hasIsActiveColumn ? User::query()->where('is_active', false)->count() : 0,
             'trashed' => User::onlyTrashed()->count(),
             'admins' => User::query()
                 ->whereHas('role', fn ($query) => $query->where('slug', 'admin'))
@@ -142,7 +145,8 @@ class UserService
         $user->forceDelete();
     }
 
-    public function payload(User $user): array
+    
+public function payload(User $user): array
     {
         $user->loadMissing(['role', 'location']);
 
@@ -155,22 +159,21 @@ class UserService
             'name' => $user->name,
             'username' => $user->username,
             'email' => $user->email,
-            'nim' => $user->nim,
-            'nip' => $user->nip,
             'no_hp' => $user->no_hp,
             'security_question' => $user->security_question,
             'security_answer' => $user->security_answer,
-            'qr_code' => $user->qr_code,
-            'qr_url' => $user->qr_url,
             'avatar' => $user->avatar,
+            'avatar_url' => $user->avatar ? Storage::disk('public')->url($user->avatar) : null,
+            'last_login_at_input' => optional($user->last_login_at)?->format('Y-m-d\TH:i'),
+            'last_password_changed_at_input' => optional($user->last_password_changed_at)?->format('Y-m-d\TH:i'),
             'initials' => $user->initials(),
-            'is_active' => $user->is_active ? 1 : 0,
+            'is_active' => Schema::hasColumn('users', 'is_active') ? (int) ($user->is_active ? 1 : 0) : null,
             'updated_at' => optional($user->updated_at)->format('d M Y H:i'),
             'deleted_at' => optional($user->deleted_at)->format('d M Y H:i'),
         ];
     }
 
-    protected function normalizePayload(array $data, ?User $user = null): array
+protected function normalizePayload(array $data, ?User $user = null): array
     {
         $payload = [
             'role_id' => $this->nullableInteger($data['role_id'] ?? null),
@@ -178,18 +181,16 @@ class UserService
             'name' => trim((string) ($data['name'] ?? '')),
             'username' => $this->normalizeUsername($data['username'] ?? ''),
             'email' => $this->normalizeEmail($data['email'] ?? null),
-            'nim' => $this->normalizeText($data['nim'] ?? null, true),
-            'nip' => $this->normalizeText($data['nip'] ?? null, true),
             'no_hp' => $this->normalizePhone($data['no_hp'] ?? ''),
             'security_question' => $this->normalizeText($data['security_question'] ?? null),
             'security_answer' => $this->normalizeText($data['security_answer'] ?? null),
-            'qr_code' => $this->normalizeText($data['qr_code'] ?? null),
-            'qr_url' => $this->normalizeText($data['qr_url'] ?? null),
-            'email_verified_at' => $this->nullableDateTime($data['email_verified_at'] ?? null),
             'last_login_at' => $this->nullableDateTime($data['last_login_at'] ?? null),
             'last_password_changed_at' => $this->nullableDateTime($data['last_password_changed_at'] ?? null),
-            'is_active' => $this->booleanValue($data['is_active'] ?? false),
         ];
+
+        if (Schema::hasColumn('users', 'is_active')) {
+            $payload['is_active'] = $this->booleanValue($data['is_active'] ?? false);
+        }
 
         if (array_key_exists('password', $data)) {
             $password = trim((string) $data['password']);

@@ -590,26 +590,94 @@ function initDraftPersistence() {
   });
 }
 
+
 function initReviewSync() {
   document.querySelectorAll('[data-step-form]').forEach((form) => syncReviewFields(form));
 }
 
 function syncReviewFields(form) {
-  const reviewMap = {
-    name: form.querySelector('[name="name"]')?.value || '-',
-    slug: form.querySelector('[name="slug"]')?.value || '-',
-    description: form.querySelector('[name="description"]')?.value || '-',
-    status: (form.querySelector('[name="is_active"]')?.value || '1') === '1' ? 'Active' : 'Inactive',
-  };
-
-  Object.entries(reviewMap).forEach(([key, value]) => {
-    const output = form.querySelector(`[data-review-field="${escapeSelectorValue(key)}"]`);
-    if (!output) {
+  form.querySelectorAll('[data-review-field]').forEach((output) => {
+    if (output.hasAttribute('data-review-static')) {
+      output.textContent = output.getAttribute('data-review-static') || '-';
       return;
     }
 
-    output.textContent = value && typeof value === 'string' && value.trim() !== '' ? value : '-';
+    const reviewKey = output.getAttribute('data-review-field') || '';
+    const sourceName = output.getAttribute('data-review-source') || reviewKey;
+    const source = sourceName
+      ? form.querySelector(`[name="${escapeSelectorValue(sourceName)}"]`)
+      : null;
+
+    output.textContent = reviewValueFromSource(source, reviewKey, output);
   });
+}
+
+function reviewValueFromSource(source, reviewKey = '', output = null) {
+  if (!source) {
+    return '-';
+  }
+
+  const rawMask = output?.getAttribute('data-review-mask') || source.getAttribute('data-review-mask') || '';
+  const shouldMask =
+    rawMask === '1' ||
+    source.type === 'password' ||
+    reviewKey === 'security_answer' ||
+    source.name === 'security_answer';
+
+  if (shouldMask) {
+    const hasValue = String(source.value || '').trim().length > 0;
+    return hasValue ? 'Tersimpan' : '-';
+  }
+
+  if (source.type === 'file') {
+    const files = Array.from(source.files || []);
+    if (!files.length) {
+      return '-';
+    }
+
+    return files.map((file) => file.name).join(', ');
+  }
+
+  if (source.type === 'datetime-local') {
+    const parsed = source.value ? new Date(source.value) : null;
+    if (parsed && !Number.isNaN(parsed.getTime())) {
+      return parsed.toLocaleString('id-ID', {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      }).trim();
+    }
+  }
+
+  if (source.type === 'date') {
+    const parsed = source.value ? new Date(source.value) : null;
+    if (parsed && !Number.isNaN(parsed.getTime())) {
+      return parsed.toLocaleDateString('id-ID', {
+        dateStyle: 'medium',
+      }).trim();
+    }
+  }
+
+  if (source.type === 'time') {
+    return source.value || '-';
+  }
+
+  if (source.type === 'checkbox') {
+    return source.checked ? 'Ya' : 'Tidak';
+  }
+
+  if (source.tagName === 'SELECT') {
+    if (source.multiple) {
+      const selected = Array.from(source.selectedOptions || [])
+        .map((option) => option.textContent.replace(/\s+/g, ' ').trim())
+        .filter(Boolean);
+      return selected.length ? selected.join(', ') : '-';
+    }
+
+    return source.options?.[source.selectedIndex]?.textContent.replace(/\s+/g, ' ').trim() || source.value || '-';
+  }
+
+  const value = String(source.value ?? '').trim();
+  return value !== '' ? value : '-';
 }
 
 function initCsvExport() {
@@ -639,11 +707,17 @@ function initCsvExport() {
         lines.push(values.join(','));
       });
 
+      const baseName = button.getAttribute('data-export-name') || table.id || 'table';
+      const safeName = String(baseName)
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '') || 'table';
+
       const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = 'roles-export.csv';
+      link.download = `${safeName}-export.csv`;
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -683,6 +757,7 @@ function draftKey(form) {
   return form.getAttribute('data-draft-key') || '';
 }
 
+
 function saveDraftForm(form, step = null) {
   const key = draftKey(form);
   if (!key) {
@@ -692,6 +767,10 @@ function saveDraftForm(form, step = null) {
   const data = {};
   form.querySelectorAll('input, textarea, select').forEach((field) => {
     if (!field.name) {
+      return;
+    }
+
+    if (field.type === 'file' || field.type === 'password' || field.dataset.draftSkip === '1') {
       return;
     }
 
@@ -734,6 +813,10 @@ async function restoreDraft(form, totalSteps) {
 
   form.querySelectorAll('input, textarea, select').forEach((field) => {
     if (!field.name || !(field.name in draft)) {
+      return;
+    }
+
+    if (field.type === 'file' || field.type === 'password' || field.dataset.draftSkip === '1') {
       return;
     }
 

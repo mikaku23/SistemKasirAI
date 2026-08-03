@@ -18,16 +18,14 @@ Schema::create('users', function (Blueprint $table) {
             $table->string('name');
             $table->string('username')->unique();
             $table->string('email')->nullable()->unique();
-            $table->string('nim')->nullable()->unique();
-            $table->string('nip')->nullable()->unique();
+       
             $table->string('no_hp');
             $table->string('password');
             $table->string('security_question')->nullable();
             $table->string('security_answer')->nullable();
-            $table->string('qr_code')->nullable();
-            $table->string('qr_url')->nullable();
+         
             $table->string('avatar')->nullable();
-            $table->timestamp('email_verified_at')->nullable();
+          
             $table->timestamp('last_login_at')->nullable();
             $table->timestamp('last_password_changed_at')->nullable();
             $table->rememberToken();

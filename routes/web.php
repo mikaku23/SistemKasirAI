@@ -1,15 +1,20 @@
 <?php
 
+use App\Http\Controllers\AuthController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
+Route::get('/dashboard-admin', function () {
     return view('admin.index', [
         'menu' => 'dashboard',
     ]);
-})->name('dashboard');
+})->name('dashboardadmin');
+
+ Route::get('/', [AuthController::class, 'create'])->name('login.form');
+    Route::post('/login', [AuthController::class, 'store'])->name('login');
+    Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 // Roles
 Route::get('roles/recycle', [RoleController::class, 'recycle'])->name('roles.recycle');
