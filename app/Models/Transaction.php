@@ -54,12 +54,12 @@ class Transaction extends Model
 
     public function items()
     {
-        return $this->hasMany(Transaction_item::class);
+        return $this->hasMany(TransactionItem::class);
     }
 
     public function payments()
     {
-        return $this->hasMany(Transaction_payment::class);
+        return $this->hasMany(TransactionPayment::class);
     }
 
     public function returns()

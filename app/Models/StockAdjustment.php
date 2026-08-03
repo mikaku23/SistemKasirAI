@@ -37,7 +37,7 @@ class StockAdjustment extends Model
 
     public function stockBatch()
     {
-        return $this->belongsTo(Stock_batches::class);
+        return $this->belongsTo(StockBatches::class);
     }
 
     public function location()

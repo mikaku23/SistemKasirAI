@@ -60,22 +60,22 @@ class User extends Authenticatable
 
     public function receivedStockBatches()
     {
-        return $this->hasMany(Stock_batches::class, 'received_by');
+        return $this->hasMany(StockBatches::class, 'received_by');
     }
 
     public function stockMovements()
     {
-        return $this->hasMany(Stock_movement::class);
+        return $this->hasMany(StockMovement::class);
     }
 
     public function stockAdjustments()
     {
-        return $this->hasMany(Stock_adjustment::class);
+        return $this->hasMany(StockAdjustment::class);
     }
 
     public function stockOpnames()
     {
-        return $this->hasMany(Stock_opname::class);
+        return $this->hasMany(StockOpname::class);
     }
 
     public function transactions()
@@ -90,17 +90,17 @@ class User extends Authenticatable
 
     public function aiConversations()
     {
-        return $this->hasMany(Ai_conversation::class);
+        return $this->hasMany(AiConversation::class);
     }
 
     public function aiMessages()
     {
-        return $this->hasMany(Ai_messages::class);
+        return $this->hasMany(AiMessages::class);
     }
 
     public function activityLogs()
     {
-        return $this->hasMany(Activity_log::class);
+        return $this->hasMany(ActivityLog::class);
     }
 
     public function initials(): string

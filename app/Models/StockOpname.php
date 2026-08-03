@@ -35,6 +35,6 @@ class StockOpname extends Model
 
     public function items()
     {
-        return $this->hasMany(Stock_opname_item::class);
+        return $this->hasMany(StockOpnameItem::class);
     }
 }

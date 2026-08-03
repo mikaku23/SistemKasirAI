@@ -61,27 +61,27 @@ class StockBatches extends Model
 
     public function stockMovements()
     {
-        return $this->hasMany(Stock_movement::class);
+        return $this->hasMany(StockMovement::class);
     }
 
     public function stockAdjustments()
     {
-        return $this->hasMany(Stock_adjustment::class);
+        return $this->hasMany(StockAdjustment::class);
     }
 
     public function stockOpnameItems()
     {
-        return $this->hasMany(Stock_opname_item::class);
+        return $this->hasMany(StockOpnameItem::class);
     }
 
     public function transactionItems()
     {
-        return $this->hasMany(Transaction_item::class);
+        return $this->hasMany(TransactionItem::class);
     }
 
     public function returnItems()
     {
-        return $this->hasMany(Return_item::class);
+        return $this->hasMany(ReturnItem::class);
     }
 }
 

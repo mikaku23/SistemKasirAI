@@ -30,21 +30,21 @@ class Visitor extends Model
 
     public function aiConversations()
     {
-        return $this->hasMany(Ai_conversation::class);
+        return $this->hasMany(AiConversation::class);
     }
 
     public function aiHandoffs()
     {
-        return $this->hasMany(Ai_handoff::class);
+        return $this->hasMany(AiHandoff::class);
     }
 
     public function aiMessages()
     {
-        return $this->hasMany(Ai_messages::class);
+        return $this->hasMany(AiMessages::class);
     }
 
     public function aiSearchLogs()
     {
-        return $this->hasMany(Ai_search_log::class);
+        return $this->hasMany(AiSearchLog::class);
     }
 }
