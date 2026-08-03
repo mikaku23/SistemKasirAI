@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Ai_channel extends Model
+class AiChannel extends Model
 {
     use SoftDeletes;
 
@@ -30,16 +30,16 @@ class Ai_channel extends Model
 
     public function conversations()
     {
-        return $this->hasMany(Ai_conversation::class);
+        return $this->hasMany(AiConversation::class);
     }
 
     public function messages()
     {
-        return $this->hasMany(Ai_messages::class);
+        return $this->hasMany(AiMessages::class);
     }
 
     public function searchLogs()
     {
-        return $this->hasMany(Ai_search_log::class);
+        return $this->hasMany(AiSearchLog::class);
     }
 }

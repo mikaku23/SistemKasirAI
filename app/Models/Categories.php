@@ -15,6 +15,7 @@ class Categories extends Model
         'name',
         'slug',
         'description',
+        'sku',
         'is_active',
     ];
 

@@ -35,22 +35,22 @@ class Location extends Model
 
     public function stockBatches()
     {
-        return $this->hasMany(Stock_batches::class);
+        return $this->hasMany(StockBatches::class);
     }
 
     public function stockMovements()
     {
-        return $this->hasMany(Stock_movement::class);
+        return $this->hasMany(StockMovement::class);
     }
 
     public function stockAdjustments()
     {
-        return $this->hasMany(Stock_adjustment::class);
+        return $this->hasMany(StockAdjustment::class);
     }
 
     public function stockOpnames()
     {
-        return $this->hasMany(Stock_opname::class);
+        return $this->hasMany(StockOpname::class);
     }
 
     public function transactions()

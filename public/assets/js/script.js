@@ -331,9 +331,8 @@
         { label: "Others", value: 9.6, color: "#8e9ab8" },
     ];
 
-    const navItems = Array.from(
-        document.querySelectorAll(".nav-item[data-view]"),
-    );
+const navItems = Array.from(document.querySelectorAll(".nav-item"));
+
     const views = Array.from(
         document.querySelectorAll(".view[data-view-panel]"),
     );
@@ -452,6 +451,22 @@
         "#icon-chat": "fa-solid fa-comments",
         "#icon-customer": "fa-solid fa-user-group",
     };
+
+    function syncGroupPillsFromSidebar() {
+        const activeItem = document.querySelector(".nav-item.active");
+        const activeGroup = activeItem?.closest(".nav-group")?.dataset.group;
+
+        groupPills.forEach((pill) => {
+            pill.classList.toggle("active", pill.dataset.group === activeGroup);
+        });
+    }
+
+    function getActiveViewFromSidebar() {
+        const activeItem = document.querySelector(
+            ".nav-item.active[data-view]",
+        );
+        return activeItem?.dataset.view || state.activeView;
+    }
 
     function renderIcon(iconRef, extraClasses = "") {
         const classes = [
@@ -896,18 +911,14 @@
         });
     }
 
-    function bindViews() {
-        navItems.forEach((item) => {
-            item.addEventListener("click", () => setView(item.dataset.view));
-        });
-
-        goViewButtons.forEach((button) => {
-            button.addEventListener("click", () => {
-                const view = button.dataset.go;
-                if (view) setView(view);
-            });
-        });
-    }
+   function bindViews() {
+       goViewButtons.forEach((button) => {
+           button.addEventListener("click", () => {
+               const view = button.dataset.go;
+               if (view) setView(view);
+           });
+       });
+   }
 
     function bindWizard() {
         openWizardButtons.forEach((button) => {
@@ -1095,31 +1106,35 @@
 
     // skeleton loading removed; no finishLoading function
 
-    function init() {
-        setTheme(state.theme);
-        setSidebarCollapsed(state.sidebarCollapsed);
-        setView(state.activeView);
+   function init() {
+       setTheme(state.theme);
+       setSidebarCollapsed(state.sidebarCollapsed);
 
-        renderSparklines();
-        renderLineChart();
-        renderDistribution();
-        renderForecast();
-        renderAlerts();
-        renderActivityTable();
-        renderProductsTable();
-        updateWizard();
+       syncGroupPillsFromSidebar();
 
-        bindThemeControls();
-        bindSidebar();
-        bindViews();
-        bindWizard();
-        bindConfirmation();
-        bindTables();
-        bindKeyboard();
-        bindSwitches();
+       if (views.length) {
+           const view = getActiveViewFromSidebar();
+           setView(view);
+       }
 
-        // previously waited to remove skeleton; no longer needed
-    }
+       renderSparklines();
+       renderLineChart();
+       renderDistribution();
+       renderForecast();
+       renderAlerts();
+       renderActivityTable();
+       renderProductsTable();
+       updateWizard();
+
+       bindThemeControls();
+       bindSidebar();
+       bindViews();
+       bindWizard();
+       bindConfirmation();
+       bindTables();
+       bindKeyboard();
+       bindSwitches();
+   }
 
     window.addEventListener("DOMContentLoaded", init);
 })();

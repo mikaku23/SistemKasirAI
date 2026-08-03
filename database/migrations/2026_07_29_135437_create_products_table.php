@@ -43,10 +43,17 @@ return new class extends Migration
 
             $table->decimal('purchase_price', 15, 2)->default(0);
             $table->decimal('sale_price', 15, 2)->default(0);
-            $table->decimal('min_stock', 15, 2)->default(0);
-            $table->decimal('stock_on_hand', 15, 2)->default(0);
+            $table->unsignedInteger('min_stock')->default(0);
+            $table->unsignedInteger('stock_on_hand')->default(0);
 
             $table->boolean('tracks_expiry')->default(false);
+            $table->string('expiry_type', 20)->default('none');
+            $table->date('production_date')->nullable();
+            $table->date('expired_at')->nullable();
+            $table->unsignedSmallInteger('shelf_life_days')->nullable();
+            $table->unsignedSmallInteger('expiry_warning_days')->default(30);
+            $table->unsignedSmallInteger('expiry_grace_days')->default(0);
+
             $table->boolean('is_featured')->default(false);
             $table->boolean('is_available_online')->default(true);
             $table->decimal('popularity_score', 8, 2)->default(0);
@@ -61,6 +68,8 @@ return new class extends Migration
             $table->index(['name']);
             $table->index(['is_featured', 'is_available_online']);
             $table->index(['popularity_score']);
+            $table->index(['tracks_expiry', 'expiry_type']);
+            $table->index(['expired_at']);
         });
     }
 

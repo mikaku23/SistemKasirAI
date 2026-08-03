@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class Ai_permission extends Model
+class AiPermission extends Model
 {
     protected $table = 'ai_permissions';
 

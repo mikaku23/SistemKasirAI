@@ -20,7 +20,7 @@
       </a>
     </div>
 
-    <div class="nav-group" data-group="users">
+    <div class="nav-group" data-group="user">
       <p class="nav-group__label">Users</p>
       <a href="{{ route('users.index') }}" class="nav-item {{ $menu == 'users' ? 'active' : '' }}">
         <i class="icon fa-solid fa-users" aria-hidden="true"></i><span>Users</span>
@@ -35,13 +35,13 @@
       <a href="{{ route('suppliers.index') }}" class="nav-item {{ $menu == 'suppliers' ? 'active' : '' }}">
         <i class="icon fa-solid fa-truck" aria-hidden="true"></i><span>Suppliers</span>
       </a>
-      <a href="#" class="nav-item ">
+      <a href="{{ route('units.index') }}" class="nav-item {{ $menu == 'units' ? 'active' : '' }}">
         <i class="icon fa-solid fa-cube" aria-hidden="true"></i><span>Units</span>
       </a>
-      <a href="#" class="nav-item ">
+      <a href="{{ route('categories.index') }}" class="nav-item {{ $menu == 'categories' ? 'active' : '' }}">
         <i class="icon fa-solid fa-tag" aria-hidden="true"></i><span>Categories</span>
       </a>
-      <a href="#" class="nav-item ">
+      <a href="{{ route('products.index') }}" class="nav-item {{ $menu == 'products' ? 'active' : '' }}">
         <i class="icon fa-solid fa-box" aria-hidden="true"></i><span>Products</span>
       </a>
     </div>

@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class Return_item extends Model
+class ReturnItem extends Model
 {
     protected $table = 'return_items';
 

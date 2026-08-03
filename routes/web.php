@@ -1,8 +1,11 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\ProductController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SupplierController;
+use App\Http\Controllers\UnitController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -37,3 +40,22 @@ Route::get('suppliers/recycle', [SupplierController::class, 'recycle'])->name('s
 Route::post('suppliers/{supplier}/restore', [SupplierController::class, 'restore'])->name('suppliers.restore');
 Route::delete('suppliers/{supplier}/force-delete', [SupplierController::class, 'forceDelete'])->name('suppliers.forceDelete');
 Route::resource('suppliers', SupplierController::class);
+
+// units
+Route::get('units/recycle', [UnitController::class, 'recycle'])->name('units.recycle');
+Route::post('units/{unit}/restore', [UnitController::class, 'restore'])->name('units.restore');
+Route::delete('units/{unit}/force-delete', [UnitController::class, 'forceDelete'])->name('units.forceDelete');
+Route::resource('units', UnitController::class);
+
+// products
+Route::get('products/recycle', [ProductController::class, 'recycle'])->name('products.recycle');
+Route::post('products/{product}/restore', [ProductController::class, 'restore'])->name('products.restore');
+Route::delete('products/{product}/force-delete', [ProductController::class, 'forceDelete'])->name('products.forceDelete');
+Route::resource('products', ProductController::class);
+
+// categories
+Route::get('categories/recycle', [CategoryController::class, 'recycle'])->name('categories.recycle');
+Route::post('categories/{category}/restore', [CategoryController::class, 'restore'])->name('categories.restore');
+Route::delete('categories/{category}/force-delete', [CategoryController::class, 'forceDelete'])->name('categories.forceDelete');
+Route::resource('categories', CategoryController::class);
+

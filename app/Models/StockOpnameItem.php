@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class Stock_opname_item extends Model
+class StockOpnameItem extends Model
 {
     protected $table = 'stock_opname_items';
 
@@ -27,7 +27,7 @@ class Stock_opname_item extends Model
 
     public function stockOpname()
     {
-        return $this->belongsTo(Stock_opname::class);
+        return $this->belongsTo(StockOpname::class);
     }
 
     public function product()

@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class Ai_conversation extends Model
+class AiConversation extends Model
 {
     protected $table = 'ai_conversations';
 
@@ -31,7 +31,7 @@ class Ai_conversation extends Model
 
     public function aiChannel()
     {
-        return $this->belongsTo(Ai_channel::class, 'ai_channel_id');
+        return $this->belongsTo(AiChannel::class, 'ai_channel_id');
     }
 
     public function user()
@@ -46,6 +46,6 @@ class Ai_conversation extends Model
 
     public function messages()
     {
-        return $this->hasMany(Ai_conversation_message::class);
+        return $this->hasMany(AiConversationMessage::class);
     }
 }

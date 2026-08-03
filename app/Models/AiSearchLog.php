@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class Ai_search_log extends Model
+class AiSearchLog extends Model
 {
     protected $table = 'ai_search_logs';
 
@@ -31,7 +31,7 @@ class Ai_search_log extends Model
 
     public function aiChannel()
     {
-        return $this->belongsTo(Ai_channel::class, 'ai_channel_id');
+        return $this->belongsTo(AiChannel::class, 'ai_channel_id');
     }
 
     public function visitor()
@@ -46,7 +46,7 @@ class Ai_search_log extends Model
 
     public function aiConversation()
     {
-        return $this->belongsTo(Ai_conversation::class, 'ai_conversation_id');
+        return $this->belongsTo(AiConversation::class, 'ai_conversation_id');
     }
 
     public function clickedProduct()

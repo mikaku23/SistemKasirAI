@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Ai_handoff extends Model
+class AiHandoff extends Model
 {
     use SoftDeletes;
 
@@ -30,7 +30,7 @@ class Ai_handoff extends Model
 
     public function aiConversation()
     {
-        return $this->belongsTo(Ai_conversation::class, 'ai_conversation_id');
+        return $this->belongsTo(AiConversation::class, 'ai_conversation_id');
     }
 
     public function visitor()
