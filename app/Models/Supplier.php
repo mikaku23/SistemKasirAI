@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -32,7 +33,7 @@ class Supplier extends Model
 
     public function stockBatches()
     {
-        return $this->hasMany(Stock_batches::class);
+        return $this->hasMany(StockBatches::class);
     }
 
     public function returns()

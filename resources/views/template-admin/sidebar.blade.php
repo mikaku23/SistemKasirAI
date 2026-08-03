@@ -29,6 +29,22 @@
         <i class="icon fa-solid fa-user-shield" aria-hidden="true"></i><span>Roles</span>
       </a>
     </div>
+
+    <div class="nav-group" data-group="inventory">
+      <p class="nav-group__label">Inventory</p>
+      <a href="{{ route('suppliers.index') }}" class="nav-item {{ $menu == 'suppliers' ? 'active' : '' }}">
+        <i class="icon fa-solid fa-truck" aria-hidden="true"></i><span>Suppliers</span>
+      </a>
+      <a href="#" class="nav-item ">
+        <i class="icon fa-solid fa-cube" aria-hidden="true"></i><span>Units</span>
+      </a>
+      <a href="#" class="nav-item ">
+        <i class="icon fa-solid fa-tag" aria-hidden="true"></i><span>Categories</span>
+      </a>
+      <a href="#" class="nav-item ">
+        <i class="icon fa-solid fa-box" aria-hidden="true"></i><span>Products</span>
+      </a>
+    </div>
   </nav>
 
   <div class="sidebar__footer glass-card">

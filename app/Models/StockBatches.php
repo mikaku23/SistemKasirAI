@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Stock_batches extends Model
+class StockBatches extends Model
 {
     use SoftDeletes;
 
@@ -84,3 +84,4 @@ class Stock_batches extends Model
         return $this->hasMany(Return_item::class);
     }
 }
+
