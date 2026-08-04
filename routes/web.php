@@ -78,14 +78,16 @@ Route::delete('stock-batches/{stock_batch}/force-delete', [StockBatchController:
 Route::resource('stock-batches', StockBatchController::class)
     ->parameters(['stock-batches' => 'stock_batch']);
 
-    Route::get('transactions/recycle', [TransactionController::class, 'recycle'])->name('transactions.recycle');
-Route::post('transactions/{transaction}/restore', [TransactionController::class, 'restore'])
+Route::get('transactions/{transaction}/print', [TransactionController::class, 'print'])
     ->whereNumber('transaction')
-    ->name('transactions.restore');
-Route::delete('transactions/{transaction}/force-delete', [TransactionController::class, 'forceDelete'])
-    ->whereNumber('transaction')
-    ->name('transactions.forceDelete');
-Route::resource('transactions', TransactionController::class)->except(['edit', 'update']);
+    ->name('transactions.print');
+
+Route::resource('transactions', TransactionController::class)->only([
+    'index',
+    'create',
+    'store',
+    'show',
+]);
 
 Route::get('locations/recycle', [LocationController::class, 'recycle'])->name('locations.recycle');
 Route::post('locations/{location}/restore', [LocationController::class, 'restore'])

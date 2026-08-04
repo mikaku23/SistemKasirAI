@@ -49,8 +49,8 @@
       </a>
     </div>
 
-    <div class="nav-group" data-group="tax">
-      <p class="nav-group__label">TAX</p>
+    <div class="nav-group" data-group="set">
+      <p class="nav-group__label">SET</p>
       <a href="{{ route('promo-settings.index') }}" class="nav-item {{ $menu == 'promo-settings' ? 'active' : '' }}">
         <i class="icon fa-solid fa-gift" aria-hidden="true"></i><span>Promo Settings</span>
       </a>

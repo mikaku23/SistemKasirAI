@@ -57,10 +57,9 @@
 <div class="receipt">
     <div class="center">
         <div class="header-title">{{ strtoupper($title) }}</div>
-        <div class="subtitle">{{ $location?->phone ? '/' . $location->phone : '' }}</div>
+        <div class="subtitle">{{ $location?->phone ?? '' }}</div>
         <div class="subtitle">{{ $location?->code ? strtoupper($location->code) : 'POS RECEIPT' }}</div>
         <div class="subtitle">{{ $location?->address ?: 'Struk pembayaran' }}</div>
-        <div class="subtitle">NPWP : -</div>
         <div class="status">{{ strtoupper($transaction->status_label ?? $transaction->status) }}</div>
     </div>
 
