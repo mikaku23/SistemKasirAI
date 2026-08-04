@@ -1,136 +1,127 @@
-@php
-    use Illuminate\Support\Str;
-
-    $transaction = $transaction ?? null;
-    $items = $transaction?->items ?? collect();
-    $taxSetting = $transaction?->taxSetting;
-    $location = $transaction?->location;
-    $cashier = $transaction?->cashier;
-    $gross = (int) $transaction->subtotal;
-    $discount = (int) $transaction->discount_amount;
-    $tax = (int) $transaction->tax_amount;
-    $total = (int) $transaction->total_amount;
-    $paid = (int) $transaction->paid_amount;
-    $change = (int) $transaction->change_amount;
-    $title = $location?->name ?: 'SistemKasirAI';
-@endphp
-<!DOCTYPE html>
+<!doctype html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ $transaction->transaction_code ?? 'Receipt' }}</title>
+    <meta charset="utf-8">
+    <title>{{ $transaction->transaction_code }}</title>
     <style>
-        @page { margin: 8mm; }
         body {
             font-family: monospace;
             font-size: 11px;
-            color: #111;
             margin: 0;
-            padding: 0;
-            background: #fff;
+            padding: 12px;
+            color: #111;
         }
-        .receipt { width: 100%; }
-        .center { text-align: center; }
-        .divider { border-top: 1px dashed #444; margin: 8px 0; }
-        .small { font-size: 10px; }
-        table { width: 100%; border-collapse: collapse; }
-        .items td { vertical-align: top; padding: 2px 0; }
-        .items .qty, .items .price, .items .total { text-align: right; white-space: nowrap; }
-        .summary td { padding: 2px 0; }
-        .summary .label { width: 62%; }
-        .summary .value { text-align: right; }
-        .bold { font-weight: 700; }
-        .header-title { font-size: 16px; font-weight: 700; letter-spacing: .3px; }
-        .subtitle { font-size: 10px; line-height: 1.4; }
-        .status {
-            display: inline-block;
-            padding: 2px 8px;
-            border: 1px solid #111;
-            border-radius: 999px;
+
+        .center {
+            text-align: center;
+        }
+
+        .muted {
+            color: #555;
+        }
+
+        .line {
+            border-top: 1px dashed #333;
+            margin: 8px 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        td {
+            vertical-align: top;
+            padding: 2px 0;
+        }
+
+        .right {
+            text-align: right;
+        }
+
+        .bold {
+            font-weight: bold;
+        }
+
+        .small {
             font-size: 10px;
-            margin-top: 4px;
         }
     </style>
 </head>
 <body>
-<div class="receipt">
-    <div class="center">
-        <div class="header-title">{{ strtoupper($title) }}</div>
-        <div class="subtitle">{{ $location?->phone ?? '' }}</div>
-        <div class="subtitle">{{ $location?->code ? strtoupper($location->code) : 'POS RECEIPT' }}</div>
-        <div class="subtitle">{{ $location?->address ?: 'Struk pembayaran' }}</div>
-        <div class="status">{{ strtoupper($transaction->status_label ?? $transaction->status) }}</div>
-    </div>
+    <div class="center bold">STRUK PEMBAYARAN</div>
+    <div class="center">{{ optional($transaction->location)->name ?? 'STORE' }}</div>
+    <div class="center small muted">{{ optional($transaction->location)->address ?? '' }}</div>
 
-    <div class="divider"></div>
+    <div class="line"></div>
 
-    <table class="small">
+    <table>
         <tr>
             <td>Bon</td>
-            <td class="bold">{{ $transaction->transaction_code }}</td>
+            <td>{{ $transaction->transaction_code }}</td>
         </tr>
         <tr>
             <td>Kasir</td>
-            <td class="bold">{{ $cashier?->name ?? '-' }}</td>
+            <td>{{ optional($transaction->cashier)->name ?? '-' }}</td>
         </tr>
         <tr>
             <td>Tanggal</td>
             <td>{{ $transaction->transaction_at ? $transaction->transaction_at->format('d-m-Y H:i:s') : '-' }}</td>
         </tr>
+    </table>
+
+    <div class="line"></div>
+
+    @foreach($transaction->items as $item)
+        <table>
+            <tr>
+                <td colspan="2" class="bold">{{ optional($item->product)->name ?? '-' }}</td>
+            </tr>
+            <tr>
+                <td>{{ (int)$item->quantity }} x Rp {{ number_format((int)$item->unit_price, 0, ',', '.') }}</td>
+                <td class="right">Rp {{ number_format((int)$item->subtotal, 0, ',', '.') }}</td>
+            </tr>
+            <tr>
+                <td colspan="2" class="small muted">Promo Item: Rp {{ number_format((int)$item->discount_amount, 0, ',', '.') }}</td>
+            </tr>
+        </table>
+    @endforeach
+
+    <div class="line"></div>
+
+    <table>
         <tr>
-            <td>Shift</td>
-            <td>{{ $transaction->shift_label ?? $transaction->shift }}</td>
+            <td>Subtotal</td>
+            <td class="right">Rp {{ number_format((int)$transaction->subtotal, 0, ',', '.') }}</td>
+        </tr>
+        <tr>
+            <td>Diskon Promo Item</td>
+            <td class="right">Rp {{ number_format((int)data_get($transaction->metadata, 'item_discount_total', 0), 0, ',', '.') }}</td>
+        </tr>
+        <tr>
+            <td>Diskon Transaksi</td>
+            <td class="right">Rp {{ number_format((int)$transaction->discount_amount, 0, ',', '.') }}</td>
         </tr>
         <tr>
             <td>Pajak</td>
-            <td>{{ $taxSetting?->name ?? '-' }} ({{ $taxSetting?->display_value ?? '-' }})</td>
+            <td class="right">Rp {{ number_format((int)$transaction->tax_amount, 0, ',', '.') }}</td>
+        </tr>
+        <tr class="bold">
+            <td>Total</td>
+            <td class="right">Rp {{ number_format((int)$transaction->total_amount, 0, ',', '.') }}</td>
+        </tr>
+        <tr>
+            <td>Tunai</td>
+            <td class="right">Rp {{ number_format((int)$transaction->paid_amount, 0, ',', '.') }}</td>
+        </tr>
+        <tr>
+            <td>Kembalian</td>
+            <td class="right">Rp {{ number_format((int)$transaction->change_amount, 0, ',', '.') }}</td>
         </tr>
     </table>
 
-    <div class="divider"></div>
-
-    <table class="items small">
-        <tbody>
-            @foreach ($items as $item)
-                @php
-                    $product = $item->product;
-                    $qty = (int) $item->quantity;
-                    $unitPrice = (int) $item->unit_price;
-                    $discountAmount = (int) $item->discount_amount;
-                    $subtotal = (int) $item->subtotal;
-                @endphp
-                <tr>
-                    <td colspan="4" class="bold">{{ strtoupper(Str::limit($product?->name ?? '-', 24)) }}</td>
-                </tr>
-                <tr>
-                    <td class="qty">{{ $qty }} x</td>
-                    <td class="price">{{ number_format($unitPrice, 0, ',', '.') }}</td>
-                    <td class="total" colspan="2">{{ number_format($subtotal, 0, ',', '.') }}</td>
-                </tr>
-               
-            @endforeach
-        </tbody>
-    </table>
-
-    <div class="divider"></div>
-
-    <table class="summary small">
-        <tr><td class="label">Subtotal</td><td class="value">{{ number_format($gross, 0, ',', '.') }}</td></tr>
-        <tr><td class="label">Discount</td><td class="value">{{ number_format($discount, 0, ',', '.') }}</td></tr>
-        <tr><td class="label">Tax</td><td class="value">{{ number_format($tax, 0, ',', '.') }}</td></tr>
-        <tr><td class="label bold">Total</td><td class="value bold">{{ number_format($total, 0, ',', '.') }}</td></tr>
-        <tr><td class="label">Uang Diterima</td><td class="value">{{ number_format($paid, 0, ',', '.') }}</td></tr>
-        <tr><td class="label bold">Kembalian</td><td class="value bold">{{ number_format($change, 0, ',', '.') }}</td></tr>
-    </table>
-
-    <div class="divider"></div>
-
-    <div class="center small">
-        <div>Tgl. {{ $transaction->transaction_at ? $transaction->transaction_at->format('d-m-Y H:i:s') : '-' }}</div>
-        <div>{{ $transaction->transaction_code }}</div>
-        <div>{{ $transaction->payment_method_label ?? $transaction->payment_method }}</div>
-    </div>
-</div>
+    <div class="line"></div>
+    <div class="center small muted">Terima kasih telah berbelanja</div>
 </body>
 </html>
+

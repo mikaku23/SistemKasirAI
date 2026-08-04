@@ -57,6 +57,9 @@
       <a href="{{ route('tax-settings.index') }}" class="nav-item {{ $menu == 'tax-settings' ? 'active' : '' }}">
         <i class="icon fa-solid fa-calculator" aria-hidden="true"></i><span>Tax Settings</span>
       </a>
+      <a href="{{ route('discount-settings.index') }}" class="nav-item {{ $menu == 'discount-settings' ? 'active' : '' }}">
+        <i class="icon fa-solid fa-percent" aria-hidden="true"></i><span>Discount Settings</span>
+      </a>
     </div>
 
     <div class="nav-group" data-group="pos">

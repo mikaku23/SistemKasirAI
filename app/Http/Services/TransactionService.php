@@ -2,6 +2,7 @@
 
 namespace App\Http\Services;
 
+use App\Models\DiscountSetting;
 use App\Models\Location;
 use App\Models\Product;
 use App\Models\StockBatches;
@@ -28,34 +29,29 @@ class TransactionService
 
     public function referenceData(): array
     {
-        $taxSettings = TaxSetting::query()
+        $taxSettings = TaxSetting::query()->where('is_active', true)->orderByDesc('is_default')->orderBy('name')->get();
+        $discountSettings = DiscountSetting::query()
             ->where('is_active', true)
+            ->where(function ($query) { $query->whereNull('starts_at')->orWhere('starts_at', '<=', now()); })
+            ->where(function ($query) { $query->whereNull('ends_at')->orWhereDate('ends_at', '>=', now()->toDateString()); })
             ->orderByDesc('is_default')
-            ->orderBy('name')
+            ->orderByDesc('priority')
+            ->orderBy('minimum_total_amount')
             ->get();
 
         return [
-            'locations' => Location::query()
-                ->where('is_active', true)
-                ->orderBy('name')
-                ->get(),
-            'products' => Product::query()
-                ->with(['category', 'unit', 'supplier', 'location'])
-                ->where('is_active', true)
-                ->orderBy('name')
-                ->get(),
+            'locations' => Location::query()->where('is_active', true)->orderBy('name')->get(),
+            'products' => Product::query()->with(['category', 'unit', 'supplier', 'location'])->where('is_active', true)->orderBy('name')->get(),
             'taxSettings' => $taxSettings,
             'defaultTaxSetting' => $taxSettings->firstWhere('is_default', true) ?: $taxSettings->first(),
+            'discountSettings' => $discountSettings,
+            'defaultDiscountSetting' => $discountSettings->firstWhere('is_default', true) ?: $discountSettings->first(),
         ];
     }
 
     public function activeTransactions(): Collection
     {
-        return Transaction::query()
-            ->with(['location', 'cashier', 'taxSetting', 'items.product', 'items.stockBatch', 'stockMovements.stockBatch'])
-            ->withCount('items')
-            ->orderByDesc('transaction_at')
-            ->get();
+        return Transaction::query()->with(['location', 'cashier', 'taxSetting', 'discountSetting', 'items.product', 'items.stockBatch', 'stockMovements.stockBatch'])->withCount('items')->orderByDesc('transaction_at')->get();
     }
 
     public function stats(): array
@@ -63,9 +59,10 @@ class TransactionService
         return [
             'total' => Transaction::query()->count(),
             'today' => Transaction::query()->whereDate('transaction_at', today())->count(),
-            'success' => Transaction::query()->where('status', 'success')->count(),
-            'waiting' => Transaction::query()->where('status', 'waiting')->count(),
-            'failed' => Transaction::query()->where('status', 'failed')->count(),
+            'paid' => Transaction::query()->where('status', 'paid')->count(),
+            'draft' => Transaction::query()->where('status', 'draft')->count(),
+            'cancelled' => Transaction::query()->where('status', 'cancelled')->count(),
+            'refunded' => Transaction::query()->where('status', 'refunded')->count(),
         ];
     }
 
@@ -73,51 +70,35 @@ class TransactionService
     {
         $payload = $this->normalizePayload($data);
         $taxSetting = TaxSetting::query()->where('is_active', true)->findOrFail($payload['tax_setting_id']);
+        $transactionAt = Carbon::parse($payload['transaction_at']);
         $items = $this->normalizeItems($payload['items']);
 
         if (empty($items)) {
-            throw ValidationException::withMessages([
-                'items' => 'Minimal 1 product harus dipilih.',
-            ]);
+            throw ValidationException::withMessages(['items' => 'Minimal 1 product harus dipilih.']);
         }
 
         $productIds = collect($items)->pluck('product_id')->unique()->values();
-        $products = Product::query()
-            ->with(['unit', 'category'])
-            ->whereIn('id', $productIds)
-            ->where('is_active', true)
-            ->get()
-            ->keyBy('id');
+        $products = Product::query()->with(['unit', 'category'])->whereIn('id', $productIds)->where('is_active', true)->get()->keyBy('id');
 
         foreach ($productIds as $productId) {
             if (! $products->has($productId)) {
-                throw ValidationException::withMessages([
-                    'items' => 'Ada product yang tidak valid atau tidak aktif.',
-                ]);
+                throw ValidationException::withMessages(['items' => 'Ada product yang tidak valid atau tidak aktif.']);
             }
         }
 
-        $requiredByProduct = collect($items)
-            ->groupBy('product_id')
-            ->map(fn ($rows) => (int) $rows->sum('quantity'));
-
+        $requiredByProduct = collect($items)->groupBy('product_id')->map(fn ($rows) => (int) $rows->sum('quantity'));
         foreach ($requiredByProduct as $productId => $requiredQty) {
             $product = $products->get($productId);
             $saleableStock = $this->saleableStockForProductLocation($productId, $payload['location_id']);
-
             if ($requiredQty > $saleableStock) {
                 $shortage = $requiredQty - $saleableStock;
-
-                throw ValidationException::withMessages([
-                    'items' => "Stok produk {$product->name} tidak mencukupi. Kurang {$shortage} pcs.",
-                ]);
+                throw ValidationException::withMessages(['items' => "Stok produk {$product->name} tidak mencukupi. Kurang {$shortage} pcs."]);
             }
         }
 
         $grossSubtotal = 0;
-        $discountTotal = 0;
+        $itemDiscountTotal = 0;
         $lineSummaries = [];
-
         foreach ($items as $row) {
             $product = $products->get($row['product_id']);
             $qty = (int) $row['quantity'];
@@ -126,66 +107,47 @@ class TransactionService
             $lineGross = $unitPrice * $qty;
             $lineDiscount = min($lineGross, $promoPerUnit * $qty);
             $lineNet = max(0, $lineGross - $lineDiscount);
-
             $grossSubtotal += $lineGross;
-            $discountTotal += $lineDiscount;
-
+            $itemDiscountTotal += $lineDiscount;
             $lineSummaries[] = [
                 'product_id' => $product->id,
                 'product_name' => $product->name,
                 'quantity' => $qty,
                 'unit_price' => $unitPrice,
                 'promo_discount_per_unit' => $promoPerUnit,
+                'line_item_discount' => $lineDiscount,
                 'line_subtotal' => $lineNet,
             ];
         }
 
-        $netSubtotal = max(0, $grossSubtotal - $discountTotal);
-        $taxAmount = $this->calculateTaxAmount($taxSetting, $netSubtotal);
-        $totalAmount = max(0, $netSubtotal + $taxAmount);
+        $subtotalAfterItemDiscount = max(0, $grossSubtotal - $itemDiscountTotal);
+        $discountSetting = $this->resolveApplicableDiscountSetting($subtotalAfterItemDiscount, $transactionAt);
+        $transactionDiscountAmount = $this->calculateDiscountAmount($discountSetting, $subtotalAfterItemDiscount);
+        $taxBase = max(0, $subtotalAfterItemDiscount - $transactionDiscountAmount);
+        $taxAmount = $this->calculateTaxAmount($taxSetting, $taxBase);
+        $totalAmount = max(0, $taxBase + $taxAmount);
 
-        $paidAmount = $payload['payment_method'] === 'cash'
-            ? max(0, (int) $payload['paid_amount'])
-            : $totalAmount;
-
+        $paidAmount = $payload['payment_method'] === 'cash' ? max(0, (int) $payload['paid_amount']) : $totalAmount;
         if ($payload['payment_method'] === 'cash' && $paidAmount < $totalAmount) {
             $lack = $totalAmount - $paidAmount;
-
-            throw ValidationException::withMessages([
-                'paid_amount' => 'Uang pelanggan kurang Rp ' . number_format($lack, 0, ',', '.'),
-            ]);
+            throw ValidationException::withMessages(['paid_amount' => 'Uang pelanggan kurang Rp ' . number_format($lack, 0, ',', '.')]);
         }
 
-        $status = 'success';
+        $status = 'paid';
         $changeAmount = max(0, $paidAmount - $totalAmount);
-        $transactionAt = Carbon::parse($payload['transaction_at']);
 
-        return DB::transaction(function () use (
-            $payload,
-            $items,
-            $products,
-            $lineSummaries,
-            $taxSetting,
-            $grossSubtotal,
-            $discountTotal,
-            $taxAmount,
-            $totalAmount,
-            $paidAmount,
-            $status,
-            $changeAmount,
-            $transactionAt,
-            $user
-        ) {
+        return DB::transaction(function () use ($payload, $items, $products, $lineSummaries, $taxSetting, $discountSetting, $grossSubtotal, $itemDiscountTotal, $subtotalAfterItemDiscount, $transactionDiscountAmount, $taxBase, $taxAmount, $totalAmount, $paidAmount, $status, $changeAmount, $transactionAt, $user) {
             $transaction = Transaction::create([
                 'transaction_code' => $this->temporaryCode(),
                 'location_id' => $payload['location_id'],
                 'cashier_id' => $payload['cashier_id'] ?? $user?->id,
                 'tax_setting_id' => $taxSetting->id,
+                'discount_setting_id' => $discountSetting?->id,
                 'customer_name' => $payload['customer_name'] ?: null,
                 'customer_phone' => $payload['customer_phone'] ?: null,
                 'shift' => $payload['shift'],
                 'subtotal' => $grossSubtotal,
-                'discount_amount' => $discountTotal,
+                'discount_amount' => $transactionDiscountAmount,
                 'tax_amount' => $taxAmount,
                 'total_amount' => $totalAmount,
                 'paid_amount' => $paidAmount,
@@ -198,12 +160,24 @@ class TransactionService
                     'source' => 'pos',
                     'inventory_applied' => false,
                     'item_count' => count($lineSummaries),
-                    'items' => $lineSummaries,
+                    'item_discount_total' => $itemDiscountTotal,
+                    'subtotal_after_item_discount' => $subtotalAfterItemDiscount,
+                    'transaction_discount_amount' => $transactionDiscountAmount,
+                    'tax_base' => $taxBase,
+                    'customer_paid' => $paidAmount,
+                    'change_amount' => $changeAmount,
                     'tax_name' => $taxSetting->name,
                     'tax_type' => $taxSetting->tax_type,
                     'tax_value' => $taxSetting->tax_value,
-                    'customer_paid' => $paidAmount,
-                    'change_amount' => $changeAmount,
+                    'discount_setting' => $discountSetting ? [
+                        'id' => $discountSetting->id,
+                        'name' => $discountSetting->name,
+                        'code' => $discountSetting->code,
+                        'discount_type' => $discountSetting->discount_type,
+                        'discount_value' => $discountSetting->discount_value,
+                        'minimum_total_amount' => $discountSetting->minimum_total_amount,
+                    ] : null,
+                    'items' => $lineSummaries,
                 ],
             ]);
 
@@ -214,30 +188,22 @@ class TransactionService
                 $product = $products->get($row['product_id']);
                 $qty = (int) $row['quantity'];
                 $allocations = $this->allocateBatches($product, $payload['location_id'], $qty);
-
                 if ($allocations['remaining'] > 0) {
-                    throw ValidationException::withMessages([
-                        'items' => "Stok produk {$product->name} tidak mencukupi. Kurang {$allocations['remaining']} pcs.",
-                    ]);
-                }
+                    throw ValidationException::withMessages(['items' => "Stok produk {$product->name} tidak mencukupi. Kurang {$allocations['remaining']} pcs."]); }
 
                 $firstBatchId = null;
                 $batchAllocations = [];
                 $unitPrice = max(0, (int) $product->sale_price);
                 $promoPerUnit = max(0, (int) $product->effective_discount_amount);
                 $lineGross = $unitPrice * $qty;
-                $lineDiscount = min($lineGross, $promoPerUnit * $qty);
-                $lineNet = max(0, $lineGross - $lineDiscount);
+                $lineItemDiscount = min($lineGross, $promoPerUnit * $qty);
+                $lineNet = max(0, $lineGross - $lineItemDiscount);
 
                 foreach ($allocations['items'] as $allocatedBatch) {
-                    /** @var StockBatches $batch */
                     $batch = $allocatedBatch['batch'];
                     $takeQty = (int) $allocatedBatch['quantity'];
                     $newRemaining = max(0, (int) $batch->qty_remaining - $takeQty);
-
-                    if ($firstBatchId === null) {
-                        $firstBatchId = $batch->id;
-                    }
+                    if ($firstBatchId === null) $firstBatchId = $batch->id;
 
                     $batch->forceFill([
                         'qty_remaining' => $newRemaining,
@@ -262,7 +228,7 @@ class TransactionService
                             'product_name' => $product->name,
                             'unit_price' => $unitPrice,
                             'promo_discount_per_unit' => $promoPerUnit,
-                            'line_discount' => $lineDiscount,
+                            'line_item_discount' => $lineItemDiscount,
                             'line_subtotal' => $lineNet,
                             'status' => $status,
                         ],
@@ -283,22 +249,21 @@ class TransactionService
                     'stock_batch_id' => $firstBatchId,
                     'quantity' => $qty,
                     'unit_price' => $unitPrice,
-                    'discount_amount' => $lineDiscount,
+                    'discount_amount' => $lineItemDiscount,
                     'subtotal' => $lineNet,
                 ]);
 
                 $product->forceFill(['last_sold_at' => $transactionAt])->save();
-
                 $persistedItems[] = [
                     'product_id' => $product->id,
                     'product_name' => $product->name,
                     'quantity' => $qty,
                     'unit_price' => $unitPrice,
                     'promo_discount_per_unit' => $promoPerUnit,
+                    'line_item_discount' => $lineItemDiscount,
                     'line_subtotal' => $lineNet,
                     'batch_allocations' => $batchAllocations,
                 ];
-
                 $transactionBatchAllocations[] = [
                     'product_id' => $product->id,
                     'product_name' => $product->name,
@@ -318,36 +283,33 @@ class TransactionService
                     'item_count' => count($persistedItems),
                     'items' => $persistedItems,
                     'batch_allocations' => $transactionBatchAllocations,
+                    'item_discount_total' => $itemDiscountTotal,
+                    'subtotal_after_item_discount' => $subtotalAfterItemDiscount,
+                    'transaction_discount_amount' => $transactionDiscountAmount,
                     'customer_paid' => $paidAmount,
                     'change_amount' => $changeAmount,
                     'tax_name' => $taxSetting->name,
                     'tax_type' => $taxSetting->tax_type,
                     'tax_value' => $taxSetting->tax_value,
+                    'discount_setting' => $discountSetting ? [
+                        'id' => $discountSetting->id,
+                        'name' => $discountSetting->name,
+                        'code' => $discountSetting->code,
+                        'discount_type' => $discountSetting->discount_type,
+                        'discount_value' => $discountSetting->discount_value,
+                        'minimum_total_amount' => $discountSetting->minimum_total_amount,
+                    ] : null,
                     'source' => 'pos',
                 ]),
             ])->saveQuietly();
 
-            return $transaction->refresh()->load([
-                'location',
-                'cashier',
-                'taxSetting',
-                'items.product',
-                'items.stockBatch',
-                'stockMovements.stockBatch',
-            ]);
+            return $transaction->refresh()->load(['location', 'cashier', 'taxSetting', 'discountSetting', 'items.product', 'items.stockBatch', 'stockMovements.stockBatch']);
         });
     }
 
     public function payload(Transaction $transaction): array
     {
-        $transaction->loadMissing([
-            'location',
-            'cashier',
-            'taxSetting',
-            'items.product',
-            'items.stockBatch',
-            'stockMovements.stockBatch',
-        ]);
+        $transaction->loadMissing(['location', 'cashier', 'taxSetting', 'discountSetting', 'items.product', 'items.stockBatch', 'stockMovements.stockBatch']);
 
         return [
             'id' => $transaction->id,
@@ -355,6 +317,8 @@ class TransactionService
             'location' => optional($transaction->location)->name,
             'cashier' => optional($transaction->cashier)->name,
             'tax_setting' => optional($transaction->taxSetting)->name,
+            'discount_setting' => optional($transaction->discountSetting)->name,
+            'discount_setting_code' => optional($transaction->discountSetting)->code,
             'items' => $transaction->items->map(fn (TransactionItem $item) => [
                 'product_name' => optional($item->product)->name,
                 'quantity' => (int) $item->quantity,
@@ -363,6 +327,8 @@ class TransactionService
                 'subtotal' => (int) $item->subtotal,
             ])->values()->all(),
             'subtotal' => (int) $transaction->subtotal,
+            'item_discount_total' => (int) $transaction->item_discount_total,
+            'transaction_discount_amount' => (int) $transaction->discount_amount,
             'discount_amount' => (int) $transaction->discount_amount,
             'tax_amount' => (int) $transaction->tax_amount,
             'total_amount' => (int) $transaction->total_amount,
@@ -398,35 +364,45 @@ class TransactionService
     protected function normalizeItems(array $items): array
     {
         $grouped = [];
-
         foreach ($items as $row) {
             $productId = (int) ($row['product_id'] ?? 0);
             $quantity = max(1, (int) ($row['quantity'] ?? 0));
-
-            if (! $productId) {
-                continue;
-            }
-
-            if (! isset($grouped[$productId])) {
-                $grouped[$productId] = 0;
-            }
-
-            $grouped[$productId] += $quantity;
+            if (! $productId) continue;
+            $grouped[$productId] = ($grouped[$productId] ?? 0) + $quantity;
         }
 
-        return collect($grouped)->map(fn (int $quantity, int $productId) => [
-            'product_id' => $productId,
-            'quantity' => $quantity,
-        ])->values()->all();
+        return collect($grouped)->map(fn (int $quantity, int $productId) => ['product_id' => $productId, 'quantity' => $quantity])->values()->all();
     }
 
     protected function calculateTaxAmount(TaxSetting $taxSetting, int $baseAmount): int
     {
-        if ($taxSetting->tax_type === 'percent') {
-            return (int) round(($baseAmount * (int) $taxSetting->tax_value) / 100);
-        }
+        return $taxSetting->tax_type === 'percent'
+            ? (int) round(($baseAmount * (int) $taxSetting->tax_value) / 100)
+            : max(0, (int) $taxSetting->tax_value);
+    }
 
-        return max(0, (int) $taxSetting->tax_value);
+    protected function calculateDiscountAmount(?DiscountSetting $setting, int $baseAmount): int
+    {
+        if (! $setting || $baseAmount <= 0) return 0;
+        if ($setting->discount_type === 'percent') {
+            return max(0, (int) round(($baseAmount * max(0, (int) $setting->discount_value)) / 100));
+        }
+        return min($baseAmount, max(0, (int) $setting->discount_value));
+    }
+
+    protected function resolveApplicableDiscountSetting(int $eligibleAmount, Carbon $transactionAt): ?DiscountSetting
+    {
+        return DiscountSetting::query()
+            ->where('is_active', true)
+            ->where(function ($query) use ($transactionAt) { $query->whereNull('starts_at')->orWhere('starts_at', '<=', $transactionAt); })
+            ->where(function ($query) use ($transactionAt) { $query->whereNull('ends_at')->orWhereDate('ends_at', '>=', $transactionAt->toDateString()); })
+            ->where('minimum_total_amount', '<=', $eligibleAmount)
+            ->orderByDesc('is_default')
+            ->orderByDesc('priority')
+            ->orderByDesc('minimum_total_amount')
+            ->orderByDesc('discount_value')
+            ->orderByDesc('id')
+            ->first();
     }
 
     protected function saleableStockForProductLocation(int $productId, int $locationId): int
@@ -434,17 +410,14 @@ class TransactionService
         $localStock = (int) $this->saleableBatchesForProductLocation($productId, $locationId)->sum('qty_remaining');
         $globalStock = (int) $this->saleableBatchesForProduct($productId)->sum('qty_remaining');
         $snapshotStock = (int) Product::query()->whereKey($productId)->value('stock_on_hand');
-
         return max($localStock, $globalStock, $snapshotStock);
     }
 
     protected function allocateBatches(Product $product, int $locationId, int $quantity): array
     {
         $batches = $this->saleableBatchesForProductLocation($product->id, $locationId);
-
         if ($batches->sum('qty_remaining') < $quantity) {
             $globalBatches = $this->saleableBatchesForProduct($product->id);
-
             if ($globalBatches->sum('qty_remaining') >= $quantity) {
                 $batches = $globalBatches;
             }
@@ -454,63 +427,31 @@ class TransactionService
             return $this->batchSortKey($left) <=> $this->batchSortKey($right);
         })->values();
 
-        $remaining = $quantity;
-        $items = [];
-
+        $remaining = $quantity; $items = [];
         foreach ($sorted as $batch) {
-            if ($remaining <= 0) {
-                break;
-            }
-
+            if ($remaining <= 0) break;
             $available = max(0, (int) $batch->qty_remaining);
-
-            if ($available <= 0) {
-                continue;
-            }
-
+            if ($available <= 0) continue;
             $take = min($available, $remaining);
-
-            if ($take > 0) {
-                $items[] = [
-                    'batch' => $batch,
-                    'quantity' => $take,
-                ];
-                $remaining -= $take;
-            }
+            if ($take > 0) { $items[] = ['batch' => $batch, 'quantity' => $take]; $remaining -= $take; }
         }
 
-        return [
-            'items' => $items,
-            'remaining' => $remaining,
-        ];
+        return ['items' => $items, 'remaining' => $remaining];
     }
 
     protected function saleableBatchesForProductLocation(int $productId, int $locationId): Collection
     {
-        return StockBatches::query()
-            ->where('product_id', $productId)
-            ->where('location_id', $locationId)
-            ->where('qty_remaining', '>', 0)
-            ->get()
-            ->filter(fn (StockBatches $batch) => $this->isSaleableBatch($batch))
-            ->values();
+        return StockBatches::query()->where('product_id', $productId)->where('location_id', $locationId)->where('qty_remaining', '>', 0)->get()->filter(fn (StockBatches $batch) => $this->isSaleableBatch($batch))->values();
     }
 
     protected function saleableBatchesForProduct(int $productId): Collection
     {
-        return StockBatches::query()
-            ->where('product_id', $productId)
-            ->where('qty_remaining', '>', 0)
-            ->get()
-            ->filter(fn (StockBatches $batch) => $this->isSaleableBatch($batch))
-            ->values();
+        return StockBatches::query()->where('product_id', $productId)->where('qty_remaining', '>', 0)->get()->filter(fn (StockBatches $batch) => $this->isSaleableBatch($batch))->values();
     }
 
     protected function isSaleableBatch(StockBatches $batch): bool
     {
-        return (int) $batch->qty_remaining > 0
-            && ! in_array($batch->status, ['expired', 'finished'], true)
-            && ! in_array($batch->expiry_status, ['expired', 'grace_period', 'depleted'], true);
+        return (int) $batch->qty_remaining > 0 && ! in_array($batch->status, ['expired', 'finished'], true) && ! in_array($batch->expiry_status, ['expired', 'grace_period', 'depleted'], true);
     }
 
     protected function batchSortKey(StockBatches $batch): array
@@ -519,20 +460,13 @@ class TransactionService
         $expiryRank = $daysLeft === null ? PHP_INT_MAX : max(-999999, (int) $daysLeft);
         $productionRank = $batch->production_date ? Carbon::parse($batch->production_date)->timestamp : PHP_INT_MAX;
         $receivedRank = $batch->received_at ? Carbon::parse($batch->received_at)->timestamp : PHP_INT_MAX;
-
         return [$expiryRank, $productionRank, $receivedRank, $batch->id];
     }
 
     protected function syncProductStockSnapshot(int $productId): void
     {
-        $stock = (int) StockBatches::query()
-            ->where('product_id', $productId)
-            ->where('qty_remaining', '>', 0)
-            ->sum('qty_remaining');
-
-        Product::query()
-            ->whereKey($productId)
-            ->update(['stock_on_hand' => $stock]);
+        $stock = (int) StockBatches::query()->where('product_id', $productId)->where('qty_remaining', '>', 0)->sum('qty_remaining');
+        Product::query()->whereKey($productId)->update(['stock_on_hand' => $stock]);
     }
 
     protected function generateTransactionCode(Transaction $transaction): string
@@ -540,23 +474,16 @@ class TransactionService
         $cashierId = (int) ($transaction->cashier_id ?: 0);
         $shift = strtoupper((string) ($transaction->shift ?: 'NA'));
         $dateCode = strtoupper($transaction->transaction_at?->format('dMy') ?? now()->format('dMy'));
-
-        return sprintf(
-            'TXN-%s-%s-%s-%s-%s',
-            $transaction->id,
-            $cashierId,
-            $shift,
-            $dateCode,
-            $this->statusCode($transaction->status)
-        );
+        return sprintf('TXN-%s-%s-%s-%s-%s', $transaction->id, $cashierId, $shift, $dateCode, $this->statusCode($transaction->status));
     }
 
     protected function statusCode(?string $status): string
     {
         return match ($status) {
-            'success' => 'SUC',
-            'waiting' => 'WAIT',
-            'failed' => 'FAIL',
+            'paid' => 'PAI',
+            'draft' => 'DRA',
+            'cancelled' => 'CXL',
+            'refunded' => 'RFD',
             default => 'UNK',
         };
     }

@@ -16,14 +16,11 @@ class TransactionStoreRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $items = $this->normalizeItems($this->input('items', []));
-
         if (empty($items)) {
-            $items = [
-                [
-                    'product_id' => $this->filled('product_id') ? (int) $this->input('product_id') : null,
-                    'quantity' => $this->filled('quantity') ? (int) $this->input('quantity') : 1,
-                ],
-            ];
+            $items = [[
+                'product_id' => $this->filled('product_id') ? (int) $this->input('product_id') : null,
+                'quantity' => $this->filled('quantity') ? (int) $this->input('quantity') : 1,
+            ]];
         }
 
         $this->merge([
@@ -35,9 +32,7 @@ class TransactionStoreRequest extends FormRequest
             'shift' => trim((string) $this->input('shift')) ?: 'morning',
             'payment_method' => trim((string) $this->input('payment_method')) ?: 'cash',
             'paid_amount' => $this->normalizeMoney($this->input('paid_amount', 0)),
-            'transaction_at' => $this->input('transaction_at')
-                ? Carbon::parse($this->input('transaction_at'))->format('Y-m-d H:i:s')
-                : now()->format('Y-m-d H:i:s'),
+            'transaction_at' => $this->input('transaction_at') ? Carbon::parse($this->input('transaction_at'))->format('Y-m-d H:i:s') : now()->format('Y-m-d H:i:s'),
             'notes' => trim((string) $this->input('notes')),
             'items' => $items,
         ]);
@@ -47,18 +42,10 @@ class TransactionStoreRequest extends FormRequest
     {
         return [
             'location_id' => ['required', 'integer', 'exists:locations,id'],
-            'tax_setting_id' => [
-                'required',
-                'integer',
-                Rule::exists('tax_settings', 'id')->where(fn ($query) => $query->where('is_active', true)),
-            ],
+            'tax_setting_id' => ['required', 'integer', Rule::exists('tax_settings', 'id')->where(fn ($query) => $query->where('is_active', true))],
             'cashier_id' => ['nullable', 'integer', 'exists:users,id'],
             'items' => ['required', 'array', 'min:1'],
-            'items.*.product_id' => [
-                'required',
-                'integer',
-                Rule::exists('products', 'id')->where(fn ($query) => $query->where('is_active', true)),
-            ],
+            'items.*.product_id' => ['required', 'integer', Rule::exists('products', 'id')->where(fn ($query) => $query->where('is_active', true))],
             'items.*.quantity' => ['required', 'integer', 'min:1'],
             'product_id' => ['nullable', 'integer'],
             'quantity' => ['nullable', 'integer', 'min:1'],
@@ -94,23 +81,12 @@ class TransactionStoreRequest extends FormRequest
         }
 
         $normalized = [];
-
         foreach ($items as $row) {
-            if (! is_array($row)) {
-                continue;
-            }
-
+            if (! is_array($row)) continue;
             $productId = isset($row['product_id']) ? (int) $row['product_id'] : null;
             $quantity = isset($row['quantity']) ? (int) $row['quantity'] : 1;
-
-            if (! $productId) {
-                continue;
-            }
-
-            $normalized[] = [
-                'product_id' => $productId,
-                'quantity' => max(1, $quantity),
-            ];
+            if (! $productId) continue;
+            $normalized[] = ['product_id' => $productId, 'quantity' => max(1, $quantity)];
         }
 
         return $normalized;
@@ -119,13 +95,8 @@ class TransactionStoreRequest extends FormRequest
     protected function normalizeMoney(mixed $value): int
     {
         $value = trim((string) $value);
-
-        if ($value === '') {
-            return 0;
-        }
-
-        $value = preg_replace('/[^0-9\-]/', '', $value) ?? '0';
-
+        if ($value === '') return 0;
+        $value = preg_replace('/[^0-9\-]/', '', $value) ?: '0';
         return (int) $value;
     }
 }

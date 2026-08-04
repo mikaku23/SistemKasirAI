@@ -16,6 +16,7 @@ class Transaction extends Model
         'location_id',
         'cashier_id',
         'tax_setting_id',
+        'discount_setting_id',
         'customer_name',
         'customer_phone',
         'shift',
@@ -43,47 +44,22 @@ class Transaction extends Model
         'metadata' => 'array',
     ];
 
-    public function location()
-    {
-        return $this->belongsTo(Location::class);
-    }
-
-    public function cashier()
-    {
-        return $this->belongsTo(User::class, 'cashier_id');
-    }
-
-    public function taxSetting()
-    {
-        return $this->belongsTo(TaxSetting::class);
-    }
-
-    public function items()
-    {
-        return $this->hasMany(TransactionItem::class);
-    }
-
-    public function payments()
-    {
-        return $this->hasMany(TransactionPayment::class);
-    }
-
-    public function stockMovements()
-    {
-        return $this->morphMany(StockMovement::class, 'reference');
-    }
-
-    public function returns()
-    {
-        return $this->morphMany(Returns::class, 'reference');
-    }
+    public function location(){ return $this->belongsTo(Location::class); }
+    public function cashier(){ return $this->belongsTo(User::class, 'cashier_id'); }
+    public function taxSetting(){ return $this->belongsTo(TaxSetting::class); }
+    public function discountSetting(){ return $this->belongsTo(DiscountSetting::class); }
+    public function items(){ return $this->hasMany(TransactionItem::class); }
+    public function payments(){ return $this->hasMany(TransactionPayment::class); }
+    public function stockMovements(){ return $this->morphMany(StockMovement::class, 'reference'); }
+    public function returns(){ return $this->morphMany(Returns::class, 'reference'); }
 
     public function getStatusLabelAttribute(): string
     {
         return match ($this->status) {
-            'success' => 'Success',
-            'waiting' => 'Waiting',
-            'failed' => 'Failed',
+            'draft' => 'Draft',
+            'paid' => 'Paid',
+            'cancelled' => 'Cancelled',
+            'refunded' => 'Refunded',
             default => ucfirst((string) $this->status),
         };
     }
@@ -91,9 +67,10 @@ class Transaction extends Model
     public function getStatusClassAttribute(): string
     {
         return match ($this->status) {
-            'success' => 'status-pill--success',
-            'waiting' => 'status-pill--warning',
-            'failed' => 'status-pill--danger',
+            'paid' => 'status-pill--success',
+            'draft' => 'status-pill--muted',
+            'cancelled' => 'status-pill--danger',
+            'refunded' => 'status-pill--warning',
             default => 'status-pill--muted',
         };
     }
@@ -111,13 +88,13 @@ class Transaction extends Model
     public function getPaymentMethodLabelAttribute(): string
     {
         return match ($this->payment_method) {
-            'cash' => 'Cash',
-            'qris' => 'QRIS',
-            'transfer' => 'Transfer',
-            'debit' => 'Debit',
-            'ewallet' => 'E-Wallet',
-            'mixed' => 'Mixed',
+            'cash' => 'Cash', 'qris' => 'QRIS', 'transfer' => 'Transfer', 'debit' => 'Debit', 'credit' => 'Credit', 'mixed' => 'Mixed',
             default => ucfirst((string) $this->payment_method),
         };
+    }
+
+    public function getItemDiscountTotalAttribute(): int
+    {
+        return (int) data_get($this->metadata, 'item_discount_total', 0);
     }
 }

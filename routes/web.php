@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\DiscountSettingController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductPromoSettingController;
@@ -78,16 +79,9 @@ Route::delete('stock-batches/{stock_batch}/force-delete', [StockBatchController:
 Route::resource('stock-batches', StockBatchController::class)
     ->parameters(['stock-batches' => 'stock_batch']);
 
-Route::get('transactions/{transaction}/print', [TransactionController::class, 'print'])
-    ->whereNumber('transaction')
-    ->name('transactions.print');
+Route::get('transactions/{transaction}/print', [TransactionController::class, 'print'])->whereNumber('transaction')->name('transactions.print');
+Route::resource('transactions', TransactionController::class);
 
-Route::resource('transactions', TransactionController::class)->only([
-    'index',
-    'create',
-    'store',
-    'show',
-]);
 
 Route::get('locations/recycle', [LocationController::class, 'recycle'])->name('locations.recycle');
 Route::post('locations/{location}/restore', [LocationController::class, 'restore'])
@@ -115,4 +109,10 @@ Route::resource('promo-settings', ProductPromoSettingController::class)->only([
     'edit',
     'update',
 ]);
+
+Route::get('discount-settings/recycle', [DiscountSettingController::class, 'recycle'])->name('discount-settings.recycle');
+Route::post('discount-settings/{discount_setting}/restore', [DiscountSettingController::class, 'restore'])->whereNumber('discount_setting')->name('discount-settings.restore');
+Route::delete('discount-settings/{discount_setting}/force-delete', [DiscountSettingController::class, 'forceDelete'])->whereNumber('discount_setting')->name('discount-settings.forceDelete');
+Route::resource('discount-settings', DiscountSettingController::class);
+
 
