@@ -36,6 +36,8 @@ class Product extends Model
         'shelf_life_days',
         'expiry_warning_days',
         'expiry_grace_days',
+        'promo_discount_amount',
+        'promo_discount_is_active',
         'is_featured',
         'is_available_online',
         'popularity_score',
@@ -44,8 +46,8 @@ class Product extends Model
     ];
 
     protected $casts = [
-        'purchase_price' => 'decimal:2',
-        'sale_price' => 'decimal:2',
+        'purchase_price' => 'integer',
+        'sale_price' => 'integer',
         'min_stock' => 'integer',
         'stock_on_hand' => 'integer',
         'tracks_expiry' => 'boolean',
@@ -55,6 +57,8 @@ class Product extends Model
         'shelf_life_days' => 'integer',
         'expiry_warning_days' => 'integer',
         'expiry_grace_days' => 'integer',
+        'promo_discount_amount' => 'integer',
+        'promo_discount_is_active' => 'boolean',
         'is_featured' => 'boolean',
         'is_available_online' => 'boolean',
         'popularity_score' => 'decimal:2',
@@ -71,6 +75,7 @@ class Product extends Model
         'expiry_days_left',
         'resolved_expiry_at',
         'expiry_summary',
+        'effective_discount_amount',
     ];
 
     public function category()
@@ -95,12 +100,12 @@ class Product extends Model
 
     public function stockBatches()
     {
-        return $this->hasMany(stockBatches::class);
+        return $this->hasMany(StockBatches::class);
     }
 
     public function stockMovements()
     {
-        return $this->hasMany(stockMovements::class);
+        return $this->hasMany(StockMovement::class);
     }
 
     public function stockAdjustments()
@@ -121,6 +126,15 @@ class Product extends Model
     public function returnItems()
     {
         return $this->hasMany(ReturnItem::class);
+    }
+
+    public function getEffectiveDiscountAmountAttribute(): int
+    {
+        if (!$this->promo_discount_is_active) {
+            return 0;
+        }
+
+        return max(0, (int) $this->promo_discount_amount);
     }
 
     public function getExpiryTypeLabelAttribute(): string
@@ -195,15 +209,15 @@ class Product extends Model
     }
 
     public function getExpiryStatusClassAttribute(): string
-{
-    return match ($this->expiry_status) {
-        'expired' => 'status-pill--danger',
-        'grace_period' => 'status-pill--grace',
-        'expires_today', 'expiring_soon' => 'status-pill--warning',
-        'safe' => 'status-pill--success',
-        default => 'status-pill--muted',
-    };
-}
+    {
+        return match ($this->expiry_status) {
+            'expired' => 'status-pill--danger',
+            'grace_period' => 'status-pill--warning',
+            'expires_today', 'expiring_soon' => 'status-pill--warning',
+            'safe' => 'status-pill--success',
+            default => 'status-pill--muted',
+        };
+    }
 
     public function getExpirySummaryAttribute(): string
     {

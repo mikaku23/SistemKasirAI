@@ -32,6 +32,9 @@
 
     <div class="nav-group" data-group="inventory">
       <p class="nav-group__label">Inventory</p>
+      <a href="{{ route('locations.index') }}" class="nav-item {{ $menu == 'locations' ? 'active' : '' }}">
+        <i class="icon fa-solid fa-map-marker-alt" aria-hidden="true"></i><span>Locations</span>
+      </a>
       <a href="{{ route('suppliers.index') }}" class="nav-item {{ $menu == 'suppliers' ? 'active' : '' }}">
         <i class="icon fa-solid fa-truck" aria-hidden="true"></i><span>Suppliers</span>
       </a>
@@ -44,6 +47,27 @@
       <a href="{{ route('products.index') }}" class="nav-item {{ $menu == 'products' ? 'active' : '' }}">
         <i class="icon fa-solid fa-box" aria-hidden="true"></i><span>Products</span>
       </a>
+    </div>
+
+    <div class="nav-group" data-group="tax">
+      <p class="nav-group__label">TAX</p>
+      <a href="{{ route('promo-settings.index') }}" class="nav-item {{ $menu == 'promo-settings' ? 'active' : '' }}">
+        <i class="icon fa-solid fa-gift" aria-hidden="true"></i><span>Promo Settings</span>
+      </a>
+      <a href="{{ route('tax-settings.index') }}" class="nav-item {{ $menu == 'tax-settings' ? 'active' : '' }}">
+        <i class="icon fa-solid fa-calculator" aria-hidden="true"></i><span>Tax Settings</span>
+      </a>
+    </div>
+
+    <div class="nav-group" data-group="pos">
+      <p class="nav-group__label">POS</p>
+      <a href="{{ route('stock-batches.index') }}" class="nav-item {{ $menu == 'stock-batches' ? 'active' : '' }}">
+        <i class="icon fa-solid fa-boxes-stacked" aria-hidden="true"></i><span>Stock Batches</span>
+      </a>
+      <a href="{{ route('transactions.index') }}" class="nav-item {{ $menu == 'transactions' ? 'active' : '' }}">
+        <i class="icon fa-solid fa-receipt" aria-hidden="true"></i><span>Transactions</span>
+      </a>
+     
     </div>
   </nav>
 

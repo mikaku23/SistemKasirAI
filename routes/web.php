@@ -2,9 +2,14 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\LocationController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ProductPromoSettingController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\StockBatchController;
 use App\Http\Controllers\SupplierController;
+use App\Http\Controllers\TaxSettingController;
+use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
@@ -58,4 +63,54 @@ Route::get('categories/recycle', [CategoryController::class, 'recycle'])->name('
 Route::post('categories/{category}/restore', [CategoryController::class, 'restore'])->name('categories.restore');
 Route::delete('categories/{category}/force-delete', [CategoryController::class, 'forceDelete'])->name('categories.forceDelete');
 Route::resource('categories', CategoryController::class);
+
+Route::get('stock-batches/recycle', [StockBatchController::class, 'recycle'])
+    ->name('stock-batches.recycle');
+
+Route::post('stock-batches/{stock_batch}/restore', [StockBatchController::class, 'restore'])
+    ->whereNumber('stock_batch')
+    ->name('stock-batches.restore');
+
+Route::delete('stock-batches/{stock_batch}/force-delete', [StockBatchController::class, 'forceDelete'])
+    ->whereNumber('stock_batch')
+    ->name('stock-batches.forceDelete');
+
+Route::resource('stock-batches', StockBatchController::class)
+    ->parameters(['stock-batches' => 'stock_batch']);
+
+    Route::get('transactions/recycle', [TransactionController::class, 'recycle'])->name('transactions.recycle');
+Route::post('transactions/{transaction}/restore', [TransactionController::class, 'restore'])
+    ->whereNumber('transaction')
+    ->name('transactions.restore');
+Route::delete('transactions/{transaction}/force-delete', [TransactionController::class, 'forceDelete'])
+    ->whereNumber('transaction')
+    ->name('transactions.forceDelete');
+Route::resource('transactions', TransactionController::class)->except(['edit', 'update']);
+
+Route::get('locations/recycle', [LocationController::class, 'recycle'])->name('locations.recycle');
+Route::post('locations/{location}/restore', [LocationController::class, 'restore'])
+    ->whereNumber('location')
+    ->name('locations.restore');
+Route::delete('locations/{location}/force-delete', [LocationController::class, 'forceDelete'])
+    ->whereNumber('location')
+    ->name('locations.forceDelete');
+Route::resource('locations', LocationController::class);
+
+Route::get('tax-settings/recycle', [TaxSettingController::class, 'recycle'])->name('tax-settings.recycle');
+Route::post('tax-settings/{tax_setting}/restore', [TaxSettingController::class, 'restore'])
+    ->whereNumber('tax_setting')
+    ->name('tax-settings.restore');
+Route::delete('tax-settings/{tax_setting}/force-delete', [TaxSettingController::class, 'forceDelete'])
+    ->whereNumber('tax_setting')
+    ->name('tax-settings.forceDelete');
+Route::resource('tax-settings', TaxSettingController::class);
+
+Route::resource('promo-settings', ProductPromoSettingController::class)->only([
+    'index',
+    'create',
+    'store',
+    'show',
+    'edit',
+    'update',
+]);
 

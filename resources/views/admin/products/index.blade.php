@@ -4,6 +4,7 @@
 
 @section('css')
 <link rel="stylesheet" href="{{ asset('assets/css/layout.css') }}">
+
 @endsection
 
 @section('content')
@@ -56,6 +57,33 @@
                 <i class="fa-solid fa-plus" aria-hidden="true"></i>
                 Tambah Produk
             </a>
+        </div>
+    </div>
+
+       <div class="stats-grid">
+        <div class="stat-card glass-card">
+            <span>Total</span>
+            <strong>{{ $productStats['total'] }}</strong>
+        </div>
+        <div class="stat-card glass-card">
+            <span>Active</span>
+            <strong>{{ $productStats['active'] }}</strong>
+        </div>
+        <div class="stat-card glass-card">
+            <span>Tracked Expiry</span>
+            <strong>{{ $productStats['tracked_expiry'] }}</strong>
+        </div>
+        <div class="stat-card glass-card">
+            <span>Expiring Soon</span>
+            <strong>{{ $productStats['expiring_soon'] }}</strong>
+        </div>
+        <div class="stat-card glass-card">
+            <span>Expired</span>
+            <strong>{{ $productStats['expired'] }}</strong>
+        </div>
+        <div class="stat-card glass-card">
+            <span>Recycle</span>
+            <strong>{{ $productStats['trashed'] }}</strong>
         </div>
     </div>
 
@@ -217,4 +245,5 @@
 
 @section('js')
 <script src="{{ asset('assets/js/layout.js') }}"></script>
+
 @endsection

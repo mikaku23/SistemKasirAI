@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" />
   <link rel="stylesheet" href="{{ asset('assets/css/style.css') }}" />
   <link rel="stylesheet" href="{{ asset('assets/css/active.css') }}" />
+  <link rel="stylesheet" href="{{ asset('assets/css/chart.css') }}" />
   @yield('css')
 </head>
 <body class="loading">
@@ -62,6 +63,7 @@
   </script>
 
   <script src="{{ asset('assets/js/script.js') }}"></script>
+  <script src="{{ asset('assets/js/chart.js') }}"></script>
   @yield('js')
 </body>
 </html>
