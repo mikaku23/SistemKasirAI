@@ -47,11 +47,46 @@ class TransactionController extends Controller
         $transaction->load(['location', 'cashier', 'taxSetting', 'discountSetting', 'items.product', 'items.stockBatch', 'stockMovements.stockBatch']);
 
         if (class_exists(PdfFacade::class)) {
+            $paperHeight = $this->estimateReceiptPaperHeight($transaction);
+
             return PdfFacade::loadView('admin.transactions.print', ['transaction' => $transaction])
-                ->setPaper([0, 0, 226.77, 900], 'portrait')
+                ->setPaper([0, 0, 226.77, $paperHeight], 'portrait')
                 ->download(($transaction->transaction_code ?: 'receipt') . '.pdf');
         }
 
         return view('admin.transactions.print', ['transaction' => $transaction]);
+    }
+
+    /**
+     * Estimasi tinggi kertas receipt agar PDF tidak menyisakan area kosong yang terlalu panjang.
+     * Satuan: points (1 pt = 1/72 inch).
+     */
+    protected function estimateReceiptPaperHeight(Transaction $transaction): int
+    {
+        $transaction->loadMissing(['items.product']);
+
+        $baseHeight = 190;    // header + info transaksi + summary + footer
+        $itemGap = 10;        // jarak antar item
+        $lineHeight = 12;     // tinggi per baris teks receipt
+        $minHeight = 320;     // jangan terlalu pendek
+        $bottomPadding = 18;   // ruang bawah sedikit
+
+        $itemsHeight = 0;
+
+        foreach ($transaction->items as $item) {
+            $productName = trim((string) optional($item->product)->name) ?: '-';
+            $nameLength = mb_strlen($productName);
+
+            // Receipt lebar sempit, jadi nama panjang perlu diasumsikan wrapping.
+            // 24 karakter per baris cukup aman untuk font monospace 11px.
+            $wrappedLines = max(1, (int) ceil($nameLength / 24));
+
+            // Nama produk + qty/subtotal + promo + sedikit jarak.
+            $itemsHeight += ($wrappedLines * $lineHeight) + (2 * $lineHeight) + $itemGap;
+        }
+
+        $estimated = $baseHeight + $itemsHeight + $bottomPadding;
+
+        return (int) max($minHeight, $estimated);
     }
 }
