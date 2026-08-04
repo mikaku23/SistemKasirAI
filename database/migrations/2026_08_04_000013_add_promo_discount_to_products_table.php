@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::table('products', function (Blueprint $table) {
             if (! Schema::hasColumn('products', 'promo_discount_amount')) {
-                $table->integer('promo_discount_amount')->default(0)->after('expiry_grace_days');
+                $table->unsignedInteger('promo_discount_amount')->default(0)->after('expired_at');
             }
 
             if (! Schema::hasColumn('products', 'promo_discount_is_active')) {

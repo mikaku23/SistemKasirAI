@@ -10,7 +10,6 @@
 @php
     $transaction = $transaction ?? null;
     $items = $transaction?->items ?? collect();
-    $item = $items->first();
 @endphp
 
 <section class="page-card glass-card transaction-page">
@@ -107,7 +106,7 @@
             </label>
 
             <label class="form-field">
-                <span>Uang Diterima</span>
+                <span>Uang Diterima Pelanggan</span>
                 <input type="text" value="Rp {{ number_format((int) $transaction->paid_amount, 0, ',', '.') }}" disabled>
             </label>
 
@@ -117,29 +116,58 @@
             </label>
 
             <label class="form-field form-field--full">
-                <span>Product</span>
-                <input type="text" value="{{ optional($item?->product)->name ?? '-' }}" disabled>
-            </label>
-
-            <label class="form-field">
-                <span>Qty</span>
-                <input type="text" value="{{ $item ? (int) $item->quantity : '-' }}" disabled>
-            </label>
-
-            <label class="form-field">
-                <span>Unit Price</span>
-                <input type="text" value="Rp {{ $item ? number_format((int) $item->unit_price, 0, ',', '.') : '-' }}" disabled>
-            </label>
-
-            <label class="form-field">
-                <span>Promo Discount</span>
-                <input type="text" value="Rp {{ $item ? number_format((int) $item->discount_amount, 0, ',', '.') : '-' }}" disabled>
-            </label>
-
-            <label class="form-field form-field--full">
                 <span>Notes</span>
                 <textarea rows="3" disabled>{{ $transaction->notes ?: '-' }}</textarea>
             </label>
+        </div>
+    </div>
+
+    <div class="table-card glass-card" style="margin-top: 16px;">
+        <div class="table-card__head">
+            <div>
+                <p class="eyebrow">ITEMS</p>
+                <h3>Rincian item transaksi</h3>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="data-table data-table--compact">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Product</th>
+                        <th>Batch</th>
+                        <th>Qty</th>
+                        <th>Unit Price</th>
+                        <th>Promo / Pcs</th>
+                        <th>Subtotal</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse ($items as $item)
+                        <tr>
+                            <td>{{ $loop->iteration }}</td>
+                            <td class="td-strong">{{ optional($item->product)->name ?? '-' }}</td>
+                            <td>{{ optional($item->stockBatch)->batch_code ?? '-' }}</td>
+                            <td>{{ (int) $item->quantity }}</td>
+                            <td>Rp {{ number_format((int) $item->unit_price, 0, ',', '.') }}</td>
+                            <td>Rp {{ number_format((int) $item->discount_amount, 0, ',', '.') }}</td>
+                            <td>Rp {{ number_format((int) $item->subtotal, 0, ',', '.') }}</td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="7">
+                                <div class="empty-state">
+                                    <div class="empty-state__icon">
+                                        <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+                                    </div>
+                                    <strong>Item transaksi belum tersedia.</strong>
+                                </div>
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
         </div>
     </div>
 </section>

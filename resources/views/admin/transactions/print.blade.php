@@ -23,7 +23,7 @@
     <style>
         @page { margin: 8mm; }
         body {
-            font-family: DejaVu Sans, Arial, sans-serif;
+            font-family: monospace;
             font-size: 11px;
             color: #111;
             margin: 0;
@@ -108,9 +108,7 @@
                     <td class="price">{{ number_format($unitPrice, 0, ',', '.') }}</td>
                     <td class="total" colspan="2">{{ number_format($subtotal, 0, ',', '.') }}</td>
                 </tr>
-                <tr>
-                    <td colspan="4" class="small">Diskon: {{ number_format($discountAmount, 0, ',', '.') }}</td>
-                </tr>
+               
             @endforeach
         </tbody>
     </table>

@@ -7,11 +7,11 @@ return new class extends Migration
 {
     public function up(): void
     {
-        DB::statement("ALTER TABLE transactions MODIFY status ENUM('success', 'waiting', 'failed') NOT NULL DEFAULT 'waiting'");
+        DB::statement("ALTER TABLE transactions MODIFY status ENUM('success','waiting','failed') NOT NULL DEFAULT 'success'");
     }
 
     public function down(): void
     {
-        DB::statement("ALTER TABLE transactions MODIFY status ENUM('draft', 'paid', 'cancelled', 'refunded') NOT NULL DEFAULT 'draft'");
+        DB::statement("ALTER TABLE transactions MODIFY status ENUM('draft','paid','cancelled','refunded') NOT NULL DEFAULT 'draft'");
     }
 };

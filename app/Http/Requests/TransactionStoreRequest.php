@@ -15,11 +15,20 @@ class TransactionStoreRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
+        $items = $this->normalizeItems($this->input('items', []));
+
+        if (empty($items)) {
+            $items = [
+                [
+                    'product_id' => $this->filled('product_id') ? (int) $this->input('product_id') : null,
+                    'quantity' => $this->filled('quantity') ? (int) $this->input('quantity') : 1,
+                ],
+            ];
+        }
+
         $this->merge([
             'location_id' => $this->filled('location_id') ? (int) $this->input('location_id') : null,
             'tax_setting_id' => $this->filled('tax_setting_id') ? (int) $this->input('tax_setting_id') : null,
-            'product_id' => $this->filled('product_id') ? (int) $this->input('product_id') : null,
-            'quantity' => $this->filled('quantity') ? (int) $this->input('quantity') : null,
             'cashier_id' => $this->filled('cashier_id') ? (int) $this->input('cashier_id') : null,
             'customer_name' => trim((string) $this->input('customer_name')),
             'customer_phone' => trim((string) $this->input('customer_phone')),
@@ -30,6 +39,7 @@ class TransactionStoreRequest extends FormRequest
                 ? Carbon::parse($this->input('transaction_at'))->format('Y-m-d H:i:s')
                 : now()->format('Y-m-d H:i:s'),
             'notes' => trim((string) $this->input('notes')),
+            'items' => $items,
         ]);
     }
 
@@ -43,16 +53,19 @@ class TransactionStoreRequest extends FormRequest
                 Rule::exists('tax_settings', 'id')->where(fn ($query) => $query->where('is_active', true)),
             ],
             'cashier_id' => ['nullable', 'integer', 'exists:users,id'],
-            'product_id' => [
+            'items' => ['required', 'array', 'min:1'],
+            'items.*.product_id' => [
                 'required',
                 'integer',
                 Rule::exists('products', 'id')->where(fn ($query) => $query->where('is_active', true)),
             ],
-            'quantity' => ['required', 'integer', 'min:1'],
+            'items.*.quantity' => ['required', 'integer', 'min:1'],
+            'product_id' => ['nullable', 'integer'],
+            'quantity' => ['nullable', 'integer', 'min:1'],
             'customer_name' => ['nullable', 'string', 'max:120'],
             'customer_phone' => ['nullable', 'string', 'max:30'],
             'shift' => ['required', Rule::in(['morning', 'afternoon', 'night'])],
-            'payment_method' => ['required', Rule::in(['cash', 'qris', 'transfer', 'debit', 'ewallet', 'mixed'])],
+            'payment_method' => ['required', Rule::in(['cash', 'qris', 'transfer', 'debit', 'credit', 'mixed'])],
             'paid_amount' => ['required', 'numeric', 'min:0'],
             'transaction_at' => ['required', 'date'],
             'notes' => ['nullable', 'string', 'max:1000'],
@@ -64,12 +77,43 @@ class TransactionStoreRequest extends FormRequest
         return [
             'location_id.required' => 'Location wajib dipilih.',
             'tax_setting_id.required' => 'Tax setting wajib dipilih.',
-            'product_id.required' => 'Product wajib dipilih.',
-            'quantity.required' => 'Jumlah barang wajib diisi.',
-            'quantity.min' => 'Jumlah barang minimal 1 pcs.',
+            'items.required' => 'Minimal 1 product harus dipilih.',
+            'items.array' => 'Data product tidak valid.',
+            'items.*.product_id.required' => 'Product pada baris transaksi wajib dipilih.',
+            'items.*.quantity.required' => 'Qty pada baris transaksi wajib diisi.',
+            'items.*.quantity.min' => 'Qty minimal 1 pcs.',
             'payment_method.required' => 'Metode pembayaran wajib dipilih.',
             'paid_amount.required' => 'Uang pelanggan wajib diisi.',
         ];
+    }
+
+    protected function normalizeItems(mixed $items): array
+    {
+        if (! is_array($items)) {
+            return [];
+        }
+
+        $normalized = [];
+
+        foreach ($items as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+
+            $productId = isset($row['product_id']) ? (int) $row['product_id'] : null;
+            $quantity = isset($row['quantity']) ? (int) $row['quantity'] : 1;
+
+            if (! $productId) {
+                continue;
+            }
+
+            $normalized[] = [
+                'product_id' => $productId,
+                'quantity' => max(1, $quantity),
+            ];
+        }
+
+        return $normalized;
     }
 
     protected function normalizeMoney(mixed $value): int

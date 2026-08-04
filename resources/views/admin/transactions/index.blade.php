@@ -17,13 +17,18 @@
         <div class="page-card__title">
             <p class="eyebrow">TRANSACTIONS</p>
             <h2>Daftar Transaksi</h2>
-            <p>Transaksi barang keluar, kembalian pelanggan, status, dan akses print struk.</p>
+            <p>Menampilkan transaksi barang keluar, total tagihan, uang diterima, kembalian, dan status transaksi.</p>
         </div>
 
         <div class="page-card__actions">
+            <label class="search-box" for="transactionSearch">
+                <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                <input type="search" id="transactionSearch" placeholder="Search transaction..." data-table-search-target="#transactionsTable">
+            </label>
+
             <a href="{{ route('transactions.create') }}" class="btn btn--primary">
                 <i class="fa-solid fa-plus" aria-hidden="true"></i>
-                Transaksi Baru
+                Input Transaksi
             </a>
         </div>
     </div>
@@ -56,8 +61,7 @@
                         <th>Code</th>
                         <th>Location</th>
                         <th>Cashier</th>
-                        <th>Product</th>
-                        <th>Qty</th>
+                        <th>Items</th>
                         <th>Total</th>
                         <th>Diterima</th>
                         <th>Kembalian</th>
@@ -69,14 +73,16 @@
                 <tbody>
                     @forelse ($transactions as $transaction)
                         @php
-                            $item = $transaction->items->first();
-                            $qtyTotal = (int) ($item?->quantity ?? 0);
+                            $firstItem = $transaction->items->first();
+                            $itemCount = (int) ($transaction->items_count ?? $transaction->items->count());
+                            $productSummary = $transaction->items->pluck('product.name')->filter()->join(', ');
+                            $previewSummary = \Illuminate\Support\Str::limit($productSummary ?: '-', 40);
                         @endphp
                         <tr data-status="{{ $transaction->status }}" data-search-text="{{ strtolower(trim(
                             ($transaction->transaction_code ?? '') . ' ' .
                             (optional($transaction->location)->name ?? '') . ' ' .
                             (optional($transaction->cashier)->name ?? '') . ' ' .
-                            (optional($item?->product)->name ?? '') . ' ' .
+                            ($productSummary ?? '') . ' ' .
                             ($transaction->customer_name ?? '') . ' ' .
                             ($transaction->payment_method ?? '') . ' ' .
                             ($transaction->status ?? '')
@@ -85,8 +91,10 @@
                             <td class="td-strong"><span class="mono-chip">{{ $transaction->transaction_code }}</span></td>
                             <td>{{ optional($transaction->location)->name ?? '-' }}</td>
                             <td>{{ optional($transaction->cashier)->name ?? '-' }}</td>
-                            <td>{{ optional($item?->product)->name ?? '-' }}</td>
-                            <td>{{ $qtyTotal }}</td>
+                            <td>
+                                <div class="td-strong">{{ $itemCount }} item</div>
+                                <small class="text-muted">{{ $previewSummary }}</small>
+                            </td>
                             <td>Rp {{ number_format((int) $transaction->total_amount, 0, ',', '.') }}</td>
                             <td>Rp {{ number_format((int) $transaction->paid_amount, 0, ',', '.') }}</td>
                             <td>Rp {{ number_format((int) $transaction->change_amount, 0, ',', '.') }}</td>
@@ -102,7 +110,7 @@
                                         <i class="fa-solid fa-eye" aria-hidden="true"></i>
                                     </a>
 
-                                    <a href="{{ route('transactions.print', $transaction->id) }}" class="icon-btn" aria-label="Print receipt">
+                                    <a href="{{ route('transactions.print', $transaction->id) }}" class="icon-btn" aria-label="Print transaction">
                                         <i class="fa-solid fa-print" aria-hidden="true"></i>
                                     </a>
                                 </div>
@@ -110,13 +118,13 @@
                         </tr>
                     @empty
                         <tr data-empty-row>
-                            <td colspan="12">
+                            <td colspan="11">
                                 <div class="empty-state">
                                     <div class="empty-state__icon">
                                         <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
                                     </div>
-                                    <strong>Belum ada data transaksi.</strong>
-                                    <p>Tekan tombol <b>Transaksi Baru</b> untuk input penjualan pertama.</p>
+                                    <strong>Belum ada transaksi.</strong>
+                                    <p>Tekan tombol <b>Input Transaksi</b> untuk membuat transaksi pertama.</p>
                                 </div>
                             </td>
                         </tr>

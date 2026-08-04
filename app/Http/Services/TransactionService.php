@@ -72,23 +72,74 @@ class TransactionService
     public function store(array $data, ?User $user = null): Transaction
     {
         $payload = $this->normalizePayload($data);
-        $product = Product::query()->with(['unit', 'category'])->findOrFail($payload['product_id']);
         $taxSetting = TaxSetting::query()->where('is_active', true)->findOrFail($payload['tax_setting_id']);
+        $items = $this->normalizeItems($payload['items']);
 
-        $saleableStock = $this->saleableStockForProductLocation($product->id, $payload['location_id']);
-
-        if ($payload['quantity'] > $saleableStock) {
-            $shortage = $payload['quantity'] - $saleableStock;
-
+        if (empty($items)) {
             throw ValidationException::withMessages([
-                'quantity' => "Stok produk {$product->name} tidak mencukupi. Kurang {$shortage} pcs.",
+                'items' => 'Minimal 1 product harus dipilih.',
             ]);
         }
 
-        $unitPrice = max(0, (int) $product->sale_price);
-        $promoDiscountPerUnit = max(0, (int) $product->effective_discount_amount);
-        $grossSubtotal = $unitPrice * $payload['quantity'];
-        $discountTotal = min($grossSubtotal, $promoDiscountPerUnit * $payload['quantity']);
+        $productIds = collect($items)->pluck('product_id')->unique()->values();
+        $products = Product::query()
+            ->with(['unit', 'category'])
+            ->whereIn('id', $productIds)
+            ->where('is_active', true)
+            ->get()
+            ->keyBy('id');
+
+        foreach ($productIds as $productId) {
+            if (! $products->has($productId)) {
+                throw ValidationException::withMessages([
+                    'items' => 'Ada product yang tidak valid atau tidak aktif.',
+                ]);
+            }
+        }
+
+        $requiredByProduct = collect($items)
+            ->groupBy('product_id')
+            ->map(fn ($rows) => (int) $rows->sum('quantity'));
+
+        foreach ($requiredByProduct as $productId => $requiredQty) {
+            $product = $products->get($productId);
+            $saleableStock = $this->saleableStockForProductLocation($productId, $payload['location_id']);
+
+            if ($requiredQty > $saleableStock) {
+                $shortage = $requiredQty - $saleableStock;
+
+                throw ValidationException::withMessages([
+                    'items' => "Stok produk {$product->name} tidak mencukupi. Kurang {$shortage} pcs.",
+                ]);
+            }
+        }
+
+        $grossSubtotal = 0;
+        $discountTotal = 0;
+        $lineSummaries = [];
+
+        foreach ($items as $row) {
+            $product = $products->get($row['product_id']);
+            $qty = (int) $row['quantity'];
+            $unitPrice = max(0, (int) $product->sale_price);
+            $promoPerUnit = max(0, (int) $product->effective_discount_amount);
+            $lineGross = $unitPrice * $qty;
+            $lineDiscount = min($lineGross, $promoPerUnit * $qty);
+            $lineNet = max(0, $lineGross - $lineDiscount);
+
+            $grossSubtotal += $lineGross;
+            $discountTotal += $lineDiscount;
+
+            $lineSummaries[] = [
+                'product_id' => $product->id,
+                'product_name' => $product->name,
+                'quantity' => $qty,
+                'unit_price' => $unitPrice,
+                'promo_discount_per_unit' => $promoPerUnit,
+                'line_subtotal' => $lineNet,
+            ];
+        }
+
         $netSubtotal = max(0, $grossSubtotal - $discountTotal);
         $taxAmount = $this->calculateTaxAmount($taxSetting, $netSubtotal);
         $totalAmount = max(0, $netSubtotal + $taxAmount);
@@ -111,10 +162,10 @@ class TransactionService
 
         return DB::transaction(function () use (
             $payload,
-            $product,
+            $items,
+            $products,
+            $lineSummaries,
             $taxSetting,
-            $unitPrice,
-            $promoDiscountPerUnit,
             $grossSubtotal,
             $discountTotal,
             $taxAmount,
@@ -146,92 +197,133 @@ class TransactionService
                 'metadata' => [
                     'source' => 'pos',
                     'inventory_applied' => false,
-                    'item_count' => 1,
-                    'total_quantity' => $payload['quantity'],
-                    'product_name' => $product->name,
-                    'promo_discount_per_unit' => $promoDiscountPerUnit,
+                    'item_count' => count($lineSummaries),
+                    'items' => $lineSummaries,
                     'tax_name' => $taxSetting->name,
                     'tax_type' => $taxSetting->tax_type,
                     'tax_value' => $taxSetting->tax_value,
+                    'customer_paid' => $paidAmount,
+                    'change_amount' => $changeAmount,
                 ],
             ]);
 
-            $allocations = $this->allocateBatches($product, $payload['location_id'], $payload['quantity']);
+            $persistedItems = [];
+            $transactionBatchAllocations = [];
 
-            if ($allocations['remaining'] > 0) {
-                throw ValidationException::withMessages([
-                    'quantity' => "Stok produk {$product->name} tidak mencukupi. Kurang {$allocations['remaining']} pcs.",
-                ]);
-            }
+            foreach ($items as $row) {
+                $product = $products->get($row['product_id']);
+                $qty = (int) $row['quantity'];
+                $allocations = $this->allocateBatches($product, $payload['location_id'], $qty);
 
-            $firstBatchId = null;
-
-            foreach ($allocations['items'] as $allocatedBatch) {
-                /** @var StockBatches $batch */
-                $batch = $allocatedBatch['batch'];
-                $qty = (int) $allocatedBatch['quantity'];
-
-                if ($firstBatchId === null) {
-                    $firstBatchId = $batch->id;
+                if ($allocations['remaining'] > 0) {
+                    throw ValidationException::withMessages([
+                        'items' => "Stok produk {$product->name} tidak mencukupi. Kurang {$allocations['remaining']} pcs.",
+                    ]);
                 }
 
-                $batch->forceFill([
-                    'qty_remaining' => max(0, (int) $batch->qty_remaining - $qty),
-                    'status' => max(0, (int) $batch->qty_remaining - $qty) <= 0 ? 'depleted' : 'active',
-                ])->save();
+                $firstBatchId = null;
+                $batchAllocations = [];
+                $unitPrice = max(0, (int) $product->sale_price);
+                $promoPerUnit = max(0, (int) $product->effective_discount_amount);
+                $lineGross = $unitPrice * $qty;
+                $lineDiscount = min($lineGross, $promoPerUnit * $qty);
+                $lineNet = max(0, $lineGross - $lineDiscount);
 
-                StockMovement::create([
+                foreach ($allocations['items'] as $allocatedBatch) {
+                    /** @var StockBatches $batch */
+                    $batch = $allocatedBatch['batch'];
+                    $takeQty = (int) $allocatedBatch['quantity'];
+                    $newRemaining = max(0, (int) $batch->qty_remaining - $takeQty);
+
+                    if ($firstBatchId === null) {
+                        $firstBatchId = $batch->id;
+                    }
+
+                    $batch->forceFill([
+                        'qty_remaining' => $newRemaining,
+                        'status' => $newRemaining <= 0 ? 'finished' : ($batch->expiry_status === 'expiring_soon' || $batch->expiry_status === 'expires_today' ? 'near_expired' : 'active'),
+                    ])->save();
+
+                    StockMovement::create([
+                        'product_id' => $product->id,
+                        'stock_batch_id' => $batch->id,
+                        'location_id' => (int) ($batch->location_id ?: $payload['location_id']),
+                        'user_id' => $user?->id,
+                        'movement_type' => 'out',
+                        'quantity' => $takeQty,
+                        'unit_cost' => (int) $batch->purchase_price,
+                        'reference_type' => Transaction::class,
+                        'reference_id' => $transaction->id,
+                        'movement_at' => $transactionAt,
+                        'notes' => 'Barang keluar via POS - ' . $transaction->transaction_code,
+                        'metadata' => [
+                            'source' => 'transaction',
+                            'transaction_code' => $transaction->transaction_code,
+                            'product_name' => $product->name,
+                            'unit_price' => $unitPrice,
+                            'promo_discount_per_unit' => $promoPerUnit,
+                            'line_discount' => $lineDiscount,
+                            'line_subtotal' => $lineNet,
+                            'status' => $status,
+                        ],
+                    ]);
+
+                    $batchAllocations[] = [
+                        'batch_id' => $batch->id,
+                        'batch_code' => $batch->batch_code,
+                        'lot_number' => $batch->lot_number,
+                        'quantity' => $takeQty,
+                        'expired_at' => optional($batch->expired_at)->format('Y-m-d'),
+                    ];
+                }
+
+                TransactionItem::create([
+                    'transaction_id' => $transaction->id,
                     'product_id' => $product->id,
-                    'stock_batch_id' => $batch->id,
-                    'location_id' => (int) $payload['location_id'],
-                    'user_id' => $user?->id,
-                    'movement_type' => 'out',
+                    'stock_batch_id' => $firstBatchId,
                     'quantity' => $qty,
-                    'unit_cost' => (int) $batch->purchase_price,
-                    'reference_type' => Transaction::class,
-                    'reference_id' => $transaction->id,
-                    'movement_at' => $transactionAt,
-                    'notes' => 'Barang keluar via POS - ' . $transaction->transaction_code,
-                    'metadata' => [
-                        'source' => 'transaction',
-                        'transaction_code' => $transaction->transaction_code,
-                        'product_name' => $product->name,
-                        'unit_price' => $unitPrice,
-                        'promo_discount_per_unit' => $promoDiscountPerUnit,
-                        'total_discount' => $discountTotal,
-                        'status' => $status,
-                    ],
+                    'unit_price' => $unitPrice,
+                    'discount_amount' => $lineDiscount,
+                    'subtotal' => $lineNet,
                 ]);
+
+                $product->forceFill(['last_sold_at' => $transactionAt])->save();
+
+                $persistedItems[] = [
+                    'product_id' => $product->id,
+                    'product_name' => $product->name,
+                    'quantity' => $qty,
+                    'unit_price' => $unitPrice,
+                    'promo_discount_per_unit' => $promoPerUnit,
+                    'line_subtotal' => $lineNet,
+                    'batch_allocations' => $batchAllocations,
+                ];
+
+                $transactionBatchAllocations[] = [
+                    'product_id' => $product->id,
+                    'product_name' => $product->name,
+                    'quantity' => $qty,
+                    'batch_allocations' => $batchAllocations,
+                ];
             }
 
-            TransactionItem::create([
-                'transaction_id' => $transaction->id,
-                'product_id' => $product->id,
-                'stock_batch_id' => $firstBatchId,
-                'quantity' => $payload['quantity'],
-                'unit_price' => $unitPrice,
-                'discount_amount' => $discountTotal,
-                'subtotal' => $totalAmount,
-            ]);
-
-            $this->syncProductStockSnapshot($product->id);
-            $product->forceFill(['last_sold_at' => $transactionAt])->save();
+            foreach ($products->keys() as $productId) {
+                $this->syncProductStockSnapshot((int) $productId);
+            }
 
             $transaction->forceFill([
                 'transaction_code' => $this->generateTransactionCode($transaction->refresh()),
                 'metadata' => array_merge($transaction->metadata ?? [], [
                     'inventory_applied' => true,
-                    'item_count' => 1,
-                    'total_quantity' => $payload['quantity'],
-                    'product_id' => $product->id,
-                    'product_name' => $product->name,
-                    'promo_discount_per_unit' => $promoDiscountPerUnit,
-                    'batch_allocations' => collect($allocations['items'])->map(fn ($item) => [
-                        'batch_id' => $item['batch']->id,
-                        'batch_code' => $item['batch']->batch_code,
-                        'quantity' => (int) $item['quantity'],
-                        'expired_at' => optional($item['batch']->expired_at)->format('Y-m-d'),
-                    ])->values()->all(),
+                    'item_count' => count($persistedItems),
+                    'items' => $persistedItems,
+                    'batch_allocations' => $transactionBatchAllocations,
+                    'customer_paid' => $paidAmount,
+                    'change_amount' => $changeAmount,
+                    'tax_name' => $taxSetting->name,
+                    'tax_type' => $taxSetting->tax_type,
+                    'tax_value' => $taxSetting->tax_value,
+                    'source' => 'pos',
                 ]),
             ])->saveQuietly();
 
@@ -257,22 +349,26 @@ class TransactionService
             'stockMovements.stockBatch',
         ]);
 
-        $item = $transaction->items->first();
-
         return [
             'id' => $transaction->id,
             'transaction_code' => $transaction->transaction_code,
             'location' => optional($transaction->location)->name,
             'cashier' => optional($transaction->cashier)->name,
             'tax_setting' => optional($transaction->taxSetting)->name,
-            'product_name' => optional($item?->product)->name,
-            'quantity' => (int) optional($item)->quantity,
+            'items' => $transaction->items->map(fn (TransactionItem $item) => [
+                'product_name' => optional($item->product)->name,
+                'quantity' => (int) $item->quantity,
+                'unit_price' => (int) $item->unit_price,
+                'discount_amount' => (int) $item->discount_amount,
+                'subtotal' => (int) $item->subtotal,
+            ])->values()->all(),
             'subtotal' => (int) $transaction->subtotal,
             'discount_amount' => (int) $transaction->discount_amount,
             'tax_amount' => (int) $transaction->tax_amount,
             'total_amount' => (int) $transaction->total_amount,
             'paid_amount' => (int) $transaction->paid_amount,
             'change_amount' => (int) $transaction->change_amount,
+            'customer_paid' => (int) $transaction->paid_amount,
             'status' => $transaction->status,
             'status_label' => $transaction->status_label,
             'status_class' => $transaction->status_class,
@@ -288,8 +384,7 @@ class TransactionService
             'location_id' => (int) ($data['location_id'] ?? 0),
             'tax_setting_id' => (int) ($data['tax_setting_id'] ?? 0),
             'cashier_id' => isset($data['cashier_id']) ? (int) $data['cashier_id'] : null,
-            'product_id' => (int) ($data['product_id'] ?? 0),
-            'quantity' => max(1, (int) ($data['quantity'] ?? 1)),
+            'items' => $data['items'] ?? [],
             'customer_name' => trim((string) ($data['customer_name'] ?? '')),
             'customer_phone' => trim((string) ($data['customer_phone'] ?? '')),
             'shift' => trim((string) ($data['shift'] ?? 'morning')),
@@ -298,6 +393,31 @@ class TransactionService
             'transaction_at' => trim((string) ($data['transaction_at'] ?? now()->format('Y-m-d H:i:s'))),
             'notes' => trim((string) ($data['notes'] ?? '')),
         ];
+    }
+
+    protected function normalizeItems(array $items): array
+    {
+        $grouped = [];
+
+        foreach ($items as $row) {
+            $productId = (int) ($row['product_id'] ?? 0);
+            $quantity = max(1, (int) ($row['quantity'] ?? 0));
+
+            if (! $productId) {
+                continue;
+            }
+
+            if (! isset($grouped[$productId])) {
+                $grouped[$productId] = 0;
+            }
+
+            $grouped[$productId] += $quantity;
+        }
+
+        return collect($grouped)->map(fn (int $quantity, int $productId) => [
+            'product_id' => $productId,
+            'quantity' => $quantity,
+        ])->values()->all();
     }
 
     protected function calculateTaxAmount(TaxSetting $taxSetting, int $baseAmount): int
@@ -311,29 +431,23 @@ class TransactionService
 
     protected function saleableStockForProductLocation(int $productId, int $locationId): int
     {
-        $locationBatches = $this->saleableBatchesForProductLocation($productId, $locationId);
+        $localStock = (int) $this->saleableBatchesForProductLocation($productId, $locationId)->sum('qty_remaining');
+        $globalStock = (int) $this->saleableBatchesForProduct($productId)->sum('qty_remaining');
+        $snapshotStock = (int) Product::query()->whereKey($productId)->value('stock_on_hand');
 
-        if ($locationBatches->isNotEmpty()) {
-            return (int) $locationBatches->sum('qty_remaining');
-        }
-
-        $fallbackBatches = $this->saleableBatchesForProduct($productId);
-
-        if ($fallbackBatches->isNotEmpty()) {
-            return (int) $fallbackBatches->sum('qty_remaining');
-        }
-
-        $product = Product::query()->find($productId);
-
-        return max(0, (int) optional($product)->stock_on_hand);
+        return max($localStock, $globalStock, $snapshotStock);
     }
 
     protected function allocateBatches(Product $product, int $locationId, int $quantity): array
     {
         $batches = $this->saleableBatchesForProductLocation($product->id, $locationId);
 
-        if ($batches->isEmpty()) {
-            $batches = $this->saleableBatchesForProduct($product->id);
+        if ($batches->sum('qty_remaining') < $quantity) {
+            $globalBatches = $this->saleableBatchesForProduct($product->id);
+
+            if ($globalBatches->sum('qty_remaining') >= $quantity) {
+                $batches = $globalBatches;
+            }
         }
 
         $sorted = $batches->sort(function (StockBatches $left, StockBatches $right) {
@@ -394,7 +508,9 @@ class TransactionService
 
     protected function isSaleableBatch(StockBatches $batch): bool
     {
-        return ! in_array($batch->expiry_status, ['expired', 'grace_period', 'depleted'], true);
+        return (int) $batch->qty_remaining > 0
+            && ! in_array($batch->status, ['expired', 'finished'], true)
+            && ! in_array($batch->expiry_status, ['expired', 'grace_period', 'depleted'], true);
     }
 
     protected function batchSortKey(StockBatches $batch): array
@@ -412,7 +528,6 @@ class TransactionService
         $stock = (int) StockBatches::query()
             ->where('product_id', $productId)
             ->where('qty_remaining', '>', 0)
-            ->get()
             ->sum('qty_remaining');
 
         Product::query()

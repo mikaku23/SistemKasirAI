@@ -12,6 +12,25 @@
     $products = $products ?? [];
     $taxSettings = $taxSettings ?? [];
     $defaultTaxSetting = $defaultTaxSetting ?? null;
+
+    $oldItems = old('items');
+    $itemRows = is_array($oldItems) && count($oldItems)
+        ? $oldItems
+        : [[
+            'product_id' => old('product_id'),
+            'quantity' => old('quantity', 1),
+        ]];
+
+    $itemRows = collect($itemRows)->filter(function ($row) {
+        return is_array($row) && (int) data_get($row, 'product_id', 0) > 0;
+    })->values()->all();
+
+    if (empty($itemRows)) {
+        $itemRows = [[
+            'product_id' => null,
+            'quantity' => 1,
+        ]];
+    }
 @endphp
 
 <section class="page-card glass-card transaction-page">
@@ -19,7 +38,7 @@
         <div class="page-card__title">
             <p class="eyebrow">TRANSACTIONS</p>
             <h2>Input Transaksi</h2>
-            <p>Isi data barang keluar 1 product saja. Diskon promo diambil otomatis dari product, tax diambil dari tax setting, dan kembalian dihitung otomatis.</p>
+            <p>Tambahkan satu atau lebih product. Diskon promo diambil otomatis dari product, tax diambil dari tax setting, dan kembalian dihitung otomatis.</p>
         </div>
 
         <div class="page-card__actions">
@@ -46,6 +65,7 @@
 
         <input type="hidden" name="transaction_at" value="{{ old('transaction_at', now()->format('Y-m-d H:i:s')) }}">
         <input type="hidden" name="cashier_id" value="{{ auth()->id() }}">
+
         <input type="hidden" name="subtotal" value="0" data-summary-field="subtotal-hidden">
         <input type="hidden" name="discount_amount" value="0" data-summary-field="discount-hidden">
         <input type="hidden" name="tax_amount" value="0" data-summary-field="tax-hidden">
@@ -62,7 +82,7 @@
             <section class="wizard-step active" data-step="1">
                 <div class="wizard-step__head">
                     <h4>Header & Item Barang</h4>
-                    <p>Pilih location, tax setting, lalu pilih 1 product yang akan dijual.</p>
+                    <p>Pilih location, tax setting, lalu isi item barang keluar.</p>
                 </div>
 
                 <div class="wizard-form-grid">
@@ -110,7 +130,7 @@
                             <option value="qris" {{ old('payment_method') === 'qris' ? 'selected' : '' }}>QRIS</option>
                             <option value="transfer" {{ old('payment_method') === 'transfer' ? 'selected' : '' }}>Transfer</option>
                             <option value="debit" {{ old('payment_method') === 'debit' ? 'selected' : '' }}>Debit</option>
-                            <option value="ewallet" {{ old('payment_method') === 'ewallet' ? 'selected' : '' }}>E-Wallet</option>
+                            <option value="credit" {{ old('payment_method') === 'credit' ? 'selected' : '' }}>Credit</option>
                             <option value="mixed" {{ old('payment_method') === 'mixed' ? 'selected' : '' }}>Mixed</option>
                         </select>
                     </label>
@@ -142,7 +162,11 @@
                             <p class="eyebrow">ITEM</p>
                             <h3>Barang terjual</h3>
                         </div>
-                        <span class="mono-chip">Diskon promo diambil otomatis dari product</span>
+
+                        <button type="button" class="btn btn--secondary" data-action="add-transaction-item">
+                            <i class="fa-solid fa-plus" aria-hidden="true"></i>
+                            Tambah Baris
+                        </button>
                     </div>
 
                     <div class="table-responsive">
@@ -155,54 +179,111 @@
                                     <th>Promo / Pcs</th>
                                     <th>Stock</th>
                                     <th>Line Total</th>
+                                    <th class="th-actions">Action</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                <tr data-item-row>
-                                    <td style="min-width: 320px;">
-                                        <select name="product_id" data-product-select required>
-                                            <option value="">Pilih product</option>
-                                            @foreach ($products as $product)
-                                                <option
-                                                    value="{{ $product->id }}"
-                                                    data-sale-price="{{ (int) $product->sale_price }}"
-                                                    data-promo-discount="{{ (int) $product->effective_discount_amount }}"
-                                                    data-stock-on-hand="{{ (int) $product->stock_on_hand }}"
-                                                    data-product-name="{{ $product->name }}"
-                                                    data-unit-label="{{ optional($product->unit)->symbol ?? '-' }}"
-                                                    {{ old('product_id') == $product->id ? 'selected' : '' }}>
-                                                    {{ $product->name }} — Rp {{ number_format((int) $product->sale_price, 0, ',', '.') }}
-                                                </option>
-                                            @endforeach
-                                        </select>
-                                    </td>
-                                    <td style="width: 120px;">
-                                        <input type="number" name="quantity" data-qty-input min="1" step="1" value="{{ old('quantity', 1) }}" required>
-                                        <small class="text-muted" data-stock-warning>Stok: -</small>
-                                    </td>
-                                    <td style="width: 150px;">
-                                        <input type="text" data-unit-price-input readonly value="Rp 0">
-                                    </td>
-                                    <td style="width: 150px;">
-                                        <input type="text" data-discount-input readonly value="Rp 0">
-                                    </td>
-                                    <td style="width: 120px;">
-                                        <input type="text" data-stock-display readonly value="-">
-                                    </td>
-                                    <td style="width: 150px;">
-                                        <input type="text" data-line-total-display readonly value="Rp 0">
-                                    </td>
-                                </tr>
+                            <tbody data-transaction-items-body>
+                                @foreach ($itemRows as $index => $row)
+                                    <tr data-item-row>
+                                        <td style="min-width: 320px;">
+                                            <select name="items[{{ $index }}][product_id]" data-product-select required>
+                                                <option value="">Pilih product</option>
+                                                @foreach ($products as $product)
+                                                    <option
+                                                        value="{{ $product->id }}"
+                                                        data-sale-price="{{ (int) $product->sale_price }}"
+                                                        data-promo-discount="{{ (int) $product->effective_discount_amount }}"
+                                                        data-stock-on-hand="{{ (int) $product->stock_on_hand }}"
+                                                        data-product-name="{{ $product->name }}"
+                                                        data-unit-label="{{ optional($product->unit)->symbol ?? '-' }}"
+                                                        {{ (int) old('items.' . $index . '.product_id', $row['product_id'] ?? 0) === (int) $product->id ? 'selected' : '' }}>
+                                                        {{ $product->name }} — Rp {{ number_format((int) $product->sale_price, 0, ',', '.') }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                        </td>
+                                        <td style="width: 120px;">
+                                            <input
+                                                type="number"
+                                                name="items[{{ $index }}][quantity]"
+                                                data-qty-input
+                                                min="1"
+                                                step="1"
+                                                value="{{ old('items.' . $index . '.quantity', $row['quantity'] ?? 1) }}"
+                                                required>
+                                            <small class="text-muted" data-stock-warning>Stok: -</small>
+                                        </td>
+                                        <td style="width: 150px;">
+                                            <input type="text" data-unit-price-input readonly value="Rp 0">
+                                        </td>
+                                        <td style="width: 150px;">
+                                            <input type="text" data-discount-input readonly value="Rp 0">
+                                        </td>
+                                        <td style="width: 120px;">
+                                            <input type="text" data-stock-display readonly value="-">
+                                        </td>
+                                        <td style="width: 150px;">
+                                            <input type="text" data-line-total-display readonly value="Rp 0">
+                                        </td>
+                                        <td class="td-actions" style="width: 70px;">
+                                            <button type="button" class="icon-btn icon-btn--danger" data-remove-row aria-label="Remove row">
+                                                <i class="fa-solid fa-trash" aria-hidden="true"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                @endforeach
                             </tbody>
                         </table>
                     </div>
+
+                    <template id="transactionItemTemplate">
+                        <tr data-item-row>
+                            <td style="min-width: 320px;">
+                                <select name="items[__INDEX__][product_id]" data-product-select required>
+                                    <option value="">Pilih product</option>
+                                    @foreach ($products as $product)
+                                        <option
+                                            value="{{ $product->id }}"
+                                            data-sale-price="{{ (int) $product->sale_price }}"
+                                            data-promo-discount="{{ (int) $product->effective_discount_amount }}"
+                                            data-stock-on-hand="{{ (int) $product->stock_on_hand }}"
+                                            data-product-name="{{ $product->name }}"
+                                            data-unit-label="{{ optional($product->unit)->symbol ?? '-' }}">
+                                            {{ $product->name }} — Rp {{ number_format((int) $product->sale_price, 0, ',', '.') }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </td>
+                            <td style="width: 120px;">
+                                <input type="number" name="items[__INDEX__][quantity]" data-qty-input min="1" step="1" value="1" required>
+                                <small class="text-muted" data-stock-warning>Stok: -</small>
+                            </td>
+                            <td style="width: 150px;">
+                                <input type="text" data-unit-price-input readonly value="Rp 0">
+                            </td>
+                            <td style="width: 150px;">
+                                <input type="text" data-discount-input readonly value="Rp 0">
+                            </td>
+                            <td style="width: 120px;">
+                                <input type="text" data-stock-display readonly value="-">
+                            </td>
+                            <td style="width: 150px;">
+                                <input type="text" data-line-total-display readonly value="Rp 0">
+                            </td>
+                            <td class="td-actions" style="width: 70px;">
+                                <button type="button" class="icon-btn icon-btn--danger" data-remove-row aria-label="Remove row">
+                                    <i class="fa-solid fa-trash" aria-hidden="true"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    </template>
                 </div>
             </section>
 
             <section class="wizard-step" data-step="2">
                 <div class="wizard-step__head">
                     <h4>Payment</h4>
-                    <p>Masukkan uang pelanggan. Total, pajak, diskon, dan kembalian dihitung otomatis.</p>
+                    <p>Masukkan uang pelanggan. Total tagihan, pajak, diskon, dan kembalian dihitung otomatis.</p>
                 </div>
 
                 <div class="wizard-form-grid">
@@ -274,8 +355,8 @@
                         <strong data-review-field="transaction-at">-</strong>
                     </div>
                     <div class="review-item review-item--full">
-                        <span>Produk</span>
-                        <p data-review-field="product-summary">Belum ada product dipilih.</p>
+                        <span>Item Barang</span>
+                        <div data-review-items class="review-stack">Belum ada item dipilih.</div>
                     </div>
                     <div class="review-item">
                         <span>Subtotal</span>
@@ -331,16 +412,23 @@
     const form = document.querySelector('[data-step-form]');
     if (!form) return;
 
-    const money = (value) => 'Rp ' + new Intl.NumberFormat('id-ID').format(Math.max(0, Math.round(Number(value || 0))));
-    const productSelect = form.querySelector('[data-product-select]');
-    const qtyInput = form.querySelector('[data-qty-input]');
-    const unitPriceInput = form.querySelector('[data-unit-price-input]');
-    const discountInput = form.querySelector('[data-discount-input]');
-    const stockDisplay = form.querySelector('[data-stock-display]');
-    const stockWarning = form.querySelector('[data-stock-warning]');
+    const currencyFormatter = new Intl.NumberFormat('id-ID');
+
+    const money = (value) => 'Rp ' + currencyFormatter.format(Math.max(0, Math.round(Number(value || 0))));
+    const escapeHtml = (value) => String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+
+    const body = form.querySelector('[data-transaction-items-body]');
+    const template = document.getElementById('transactionItemTemplate');
+    const addRowButton = form.querySelector('[data-action="add-transaction-item"]');
     const taxSelect = form.querySelector('select[name="tax_setting_id"]');
     const paymentMethodSelect = form.querySelector('select[name="payment_method"]');
     const paidInput = form.querySelector('[data-paid-input]');
+    const reviewItems = form.querySelector('[data-review-items]');
 
     const displays = {
         subtotal: form.querySelector('[data-summary-display="subtotal"]'),
@@ -366,7 +454,6 @@
         customerName: form.querySelector('[data-review-field="customer-name"]'),
         customerPhone: form.querySelector('[data-review-field="customer-phone"]'),
         transactionAt: form.querySelector('[data-review-field="transaction-at"]'),
-        productSummary: form.querySelector('[data-review-field="product-summary"]'),
         subtotal: form.querySelector('[data-review-field="subtotal"]'),
         discount: form.querySelector('[data-review-field="discount"]'),
         tax: form.querySelector('[data-review-field="tax"]'),
@@ -385,42 +472,86 @@
         };
     };
 
-    const productInfo = () => {
-        const selected = productSelect?.selectedOptions?.[0];
+    const getRows = () => Array.from(body.querySelectorAll('[data-item-row]'));
+
+    const rowData = (row) => {
+        const select = row.querySelector('[data-product-select]');
+        const option = select?.selectedOptions?.[0];
         return {
-            id: selected?.value || '',
-            name: selected?.dataset.productName || '',
-            salePrice: Number(selected?.dataset.salePrice || 0),
-            promoDiscount: Number(selected?.dataset.promoDiscount || 0),
-            stock: Number(selected?.dataset.stockOnHand || 0),
-            unit: selected?.dataset.unitLabel || '-',
+            select,
+            option,
+            productId: Number(select?.value || 0),
+            name: option?.dataset.productName || '',
+            salePrice: Number(option?.dataset.salePrice || 0),
+            promoDiscount: Number(option?.dataset.promoDiscount || 0),
+            stock: Number(option?.dataset.stockOnHand || 0),
+            unit: option?.dataset.unitLabel || '-',
+            qty: Number(row.querySelector('[data-qty-input]')?.value || 0),
         };
     };
 
-    const syncProduct = () => {
-        const info = productInfo();
-        const qty = Number(qtyInput.value || 0);
+    const usedQtyByProduct = () => {
+        const totals = {};
+        getRows().forEach((row) => {
+            const data = rowData(row);
+            if (!data.productId) return;
+            totals[data.productId] = (totals[data.productId] || 0) + Math.max(0, data.qty);
+        });
+        return totals;
+    };
 
-        unitPriceInput.value = money(info.salePrice);
-        discountInput.value = money(info.promoDiscount);
-        stockDisplay.value = info.id ? String(info.stock) : '-';
-        stockWarning.textContent = info.id ? `Stok tersedia: ${new Intl.NumberFormat('id-ID').format(info.stock)} ${info.unit}` : 'Stok: -';
+    const updateRow = (row) => {
+        const data = rowData(row);
+        const qtyInput = row.querySelector('[data-qty-input]');
+        const unitPriceInput = row.querySelector('[data-unit-price-input]');
+        const discountInput = row.querySelector('[data-discount-input]');
+        const stockDisplay = row.querySelector('[data-stock-display]');
+        const stockWarning = row.querySelector('[data-stock-warning]');
+        const lineTotalDisplay = row.querySelector('[data-line-total-display]');
+        const totals = usedQtyByProduct();
 
-        qtyInput.max = info.stock > 0 ? String(info.stock) : '';
-        if (info.stock > 0 && qty > info.stock) {
-            qtyInput.value = String(info.stock);
+        if (data.productId) {
+            const remainingForRow = Math.max(0, data.stock - ((totals[data.productId] || 0) - Math.max(0, data.qty)));
+            qtyInput.max = String(remainingForRow || data.stock || '');
+            if (Number(qtyInput.value || 0) > remainingForRow && remainingForRow > 0) {
+                qtyInput.value = String(remainingForRow);
+            }
+            unitPriceInput.value = money(data.salePrice);
+            discountInput.value = money(data.promoDiscount);
+            stockDisplay.value = currencyFormatter.format(data.stock);
+            stockWarning.textContent = `Stok tersedia: ${currencyFormatter.format(data.stock)} ${data.unit}`;
+        } else {
+            qtyInput.max = '';
+            unitPriceInput.value = money(0);
+            discountInput.value = money(0);
+            stockDisplay.value = '-';
+            stockWarning.textContent = 'Stok: -';
         }
+
+        const qty = Math.max(1, Number(qtyInput.value || 1));
+        const lineGross = data.salePrice * qty;
+        const lineDiscount = Math.min(lineGross, data.promoDiscount * qty);
+        const lineNet = Math.max(0, lineGross - lineDiscount);
+        lineTotalDisplay.value = money(lineNet);
+
+        return {
+            ...data,
+            qty,
+            lineGross,
+            lineDiscount,
+            lineNet,
+        };
     };
 
     const calc = () => {
-        const info = productInfo();
-        const qty = Math.max(1, Number(qtyInput.value || 1));
-        const unitPrice = Number(info.salePrice || 0);
-        const promo = Number(info.promoDiscount || 0);
+        const rows = getRows().map(updateRow).filter((row) => row.productId);
+        const totals = rows.reduce((acc, row) => {
+            acc.subtotal += row.lineGross;
+            acc.discount += row.lineDiscount;
+            return acc;
+        }, { subtotal: 0, discount: 0 });
 
-        const subtotal = qty * unitPrice;
-        const discountTotal = Math.min(subtotal, qty * promo);
-        const net = Math.max(0, subtotal - discountTotal);
+        const net = Math.max(0, totals.subtotal - totals.discount);
         const tax = taxValue();
         const taxAmount = tax.type === 'percent'
             ? Math.round((net * tax.value) / 100)
@@ -437,14 +568,14 @@
         const paid = Number(paidInput.value || 0);
         const change = Math.max(0, paid - total);
 
-        displays.subtotal.value = money(subtotal);
-        displays.discount.value = money(discountTotal);
+        displays.subtotal.value = money(totals.subtotal);
+        displays.discount.value = money(totals.discount);
         displays.tax.value = money(taxAmount);
         displays.total.value = money(total);
         displays.change.value = money(change);
 
-        hidden.subtotal.value = String(subtotal);
-        hidden.discount.value = String(discountTotal);
+        hidden.subtotal.value = String(totals.subtotal);
+        hidden.discount.value = String(totals.discount);
         hidden.tax.value = String(taxAmount);
         hidden.total.value = String(total);
         hidden.change.value = String(change);
@@ -456,38 +587,100 @@
         review.customerName.textContent = form.querySelector('input[name="customer_name"]')?.value?.trim() || '-';
         review.customerPhone.textContent = form.querySelector('input[name="customer_phone"]')?.value?.trim() || '-';
         review.transactionAt.textContent = form.querySelector('input[name="transaction_at"]')?.value || '-';
-        review.productSummary.textContent = info.id
-            ? `${info.name} • Qty ${qty} • Unit ${money(unitPrice)} • Promo/Pcs ${money(promo)}`
-            : 'Belum ada product dipilih.';
-        review.subtotal.textContent = money(subtotal);
-        review.discount.textContent = money(discountTotal);
+        review.subtotal.textContent = money(totals.subtotal);
+        review.discount.textContent = money(totals.discount);
         review.tax.textContent = money(taxAmount);
         review.total.textContent = money(total);
         review.paid.textContent = money(paid);
         review.change.textContent = money(change);
         review.notes.textContent = form.querySelector('textarea[name="notes"]')?.value?.trim() || '-';
 
-        return { subtotal, discountTotal, taxAmount, total, paid, change };
+        if (reviewItems) {
+            if (!rows.length) {
+                reviewItems.innerHTML = 'Belum ada item dipilih.';
+            } else {
+                reviewItems.innerHTML = rows.map((row) => {
+                    const select = row.querySelector('[data-product-select]');
+                    const option = select?.selectedOptions?.[0];
+                    const name = option?.dataset.productName || '-';
+                    const qty = Number(row.querySelector('[data-qty-input]')?.value || 0);
+                    const unitPrice = Number(option?.dataset.salePrice || 0);
+                    const promo = Number(option?.dataset.promoDiscount || 0);
+                    const gross = qty * unitPrice;
+                    const discount = Math.min(gross, promo * qty);
+                    const net = Math.max(0, gross - discount);
+
+                    return `
+                        <div class="form-alert form-alert--info" style="margin: 0 0 8px 0;">
+                            <strong>${escapeHtml(name)}</strong>
+                            <div>Qty: ${qty} | Unit: ${money(unitPrice)} | Promo/Pcs: ${money(promo)} | Subtotal: ${money(net)}</div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        return { subtotal: totals.subtotal, discount: totals.discount, taxAmount, total, paid, change };
     };
 
-    [productSelect, qtyInput, taxSelect, paymentMethodSelect, paidInput].forEach((el) => {
-        el?.addEventListener('change', () => {
-            syncProduct();
-            calc();
+    const reindexRows = () => {
+        getRows().forEach((row, index) => {
+            const productSelect = row.querySelector('[data-product-select]');
+            const qtyInput = row.querySelector('[data-qty-input]');
+            if (productSelect) {
+                productSelect.name = `items[${index}][product_id]`;
+            }
+            if (qtyInput) {
+                qtyInput.name = `items[${index}][quantity]`;
+            }
         });
-        el?.addEventListener('input', () => {
-            syncProduct();
+    };
+
+    const addRow = () => {
+        const index = getRows().length;
+        const html = template.innerHTML.replaceAll('__INDEX__', index);
+        const wrapper = document.createElement('tbody');
+        wrapper.innerHTML = html.trim();
+        const row = wrapper.firstElementChild;
+        body.appendChild(row);
+        bindRow(row);
+        reindexRows();
+        calc();
+    };
+
+    const removeRow = (row) => {
+        const rows = getRows();
+        if (rows.length <= 1) {
+            row.querySelector('[data-product-select]').value = '';
+            row.querySelector('[data-qty-input]').value = 1;
             calc();
-        });
-    });
+            return;
+        }
+
+        row.remove();
+        reindexRows();
+        calc();
+    };
+
+    const bindRow = (row) => {
+        row.querySelector('[data-product-select]')?.addEventListener('change', calc);
+        row.querySelector('[data-qty-input]')?.addEventListener('input', calc);
+        row.querySelector('[data-remove-row]')?.addEventListener('click', () => removeRow(row));
+    };
+
+    getRows().forEach(bindRow);
+
+    addRowButton?.addEventListener('click', addRow);
 
     form.querySelector('select[name="location_id"]')?.addEventListener('change', calc);
     form.querySelector('select[name="shift"]')?.addEventListener('change', calc);
+    form.querySelector('select[name="tax_setting_id"]')?.addEventListener('change', calc);
+    form.querySelector('select[name="payment_method"]')?.addEventListener('change', calc);
     form.querySelector('input[name="customer_name"]')?.addEventListener('input', calc);
     form.querySelector('input[name="customer_phone"]')?.addEventListener('input', calc);
     form.querySelector('textarea[name="notes"]')?.addEventListener('input', calc);
+    paidInput?.addEventListener('input', calc);
 
-    syncProduct();
     calc();
 })();
 </script>

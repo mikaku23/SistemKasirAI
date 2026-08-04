@@ -37,7 +37,10 @@ class TransactionController extends Controller
         return redirect()
             ->route('transactions.show', $transaction->id)
             ->with('success', 'Transaksi berhasil disimpan.')
-            ->with('success_detail', 'Kembalian uang pelanggan: Rp ' . number_format((int) $transaction->change_amount, 0, ',', '.'));
+            ->with(
+                'success_detail',
+                'Kembalian uang pelanggan: Rp ' . number_format((int) $transaction->change_amount, 0, ',', '.')
+            );
     }
 
     public function show(Transaction $transaction): View
@@ -63,6 +66,7 @@ class TransactionController extends Controller
             'taxSetting',
             'items.product',
             'items.stockBatch',
+            'stockMovements.stockBatch',
         ]);
 
         if (class_exists(PdfFacade::class)) {
