@@ -72,6 +72,15 @@
       </a>
      
     </div>
+
+      <div class="nav-group" data-group="log">
+      <p class="nav-group__label">LOG</p>
+      <a href="{{ route('stock-movements.index') }}" class="nav-item {{ $menu == 'stock-movements' ? 'active' : '' }}">
+        <i class="icon fa-solid fa-exchange-alt" aria-hidden="true"></i><span>Stock Movements</span>
+      </a>
+     
+    </div>
+
   </nav>
 
   <div class="sidebar__footer glass-card">

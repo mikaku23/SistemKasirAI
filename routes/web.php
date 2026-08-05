@@ -8,6 +8,7 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductPromoSettingController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\StockBatchController;
+use App\Http\Controllers\StockMovementController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\TaxSettingController;
 use App\Http\Controllers\TransactionController;
@@ -118,6 +119,7 @@ Route::post('discount-settings/{discount_setting}/restore', [DiscountSettingCont
 Route::delete('discount-settings/{discount_setting}/force-delete', [DiscountSettingController::class, 'forceDelete'])->whereNumber('discount_setting')->name('discount-settings.forceDelete');
 Route::resource('discount-settings', DiscountSettingController::class);
 
-
-
-
+Route::get('stock-movements', [StockMovementController::class, 'index'])->name('stock-movements.index');
+Route::get('stock-movements/{stockMovement}', [StockMovementController::class, 'show'])
+    ->whereNumber('stockMovement')
+    ->name('stock-movements.show');
