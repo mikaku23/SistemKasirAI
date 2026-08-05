@@ -448,9 +448,12 @@ class TransactionService
     protected function saleableStockForProductLocation(int $productId, int $locationId): int
     {
         $localStock = (int) $this->saleableBatchesForProductLocation($productId, $locationId)->sum('qty_remaining');
-        $globalStock = (int) $this->saleableBatchesForProduct($productId)->sum('qty_remaining');
-        $snapshotStock = (int) Product::query()->whereKey($productId)->value('stock_on_hand');
-        return max($localStock, $globalStock, $snapshotStock);
+
+        if ($localStock > 0) {
+            return $localStock;
+        }
+
+        return (int) $this->saleableBatchesForProduct($productId)->sum('qty_remaining');
     }
 
     protected function allocateBatches(Product $product, int $locationId, int $quantity): array

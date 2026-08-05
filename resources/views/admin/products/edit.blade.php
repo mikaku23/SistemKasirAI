@@ -300,8 +300,9 @@
                     </label>
 
                     <label class="form-field">
-                        <span>Stock On Hand</span>
+                        <span>Stock On Hand (otomatis dari batch)</span>
                         <input type="number" name="stock_on_hand" value="{{ old('stock_on_hand', $product->stock_on_hand) }}" min="0" step="1" placeholder="0">
+                        <small class="text-muted">Nilai ini akan disinkronkan otomatis dari total qty remaining semua batch.</small>
                     </label>
 
                     <label class="form-field">
@@ -449,7 +450,7 @@
                         <strong>{{ old('min_stock', $product->min_stock) !== null && old('min_stock', $product->min_stock) !== '' ? old('min_stock', $product->min_stock) : '-' }}</strong>
                     </div>
                     <div class="review-item">
-                        <span>Stock On Hand</span>
+                        <span>Stock On Hand (otomatis dari batch)</span>
                         <strong>{{ old('stock_on_hand', $product->stock_on_hand) !== null && old('stock_on_hand', $product->stock_on_hand) !== '' ? old('stock_on_hand', $product->stock_on_hand) : '-' }}</strong>
                     </div>
                     <div class="review-item">

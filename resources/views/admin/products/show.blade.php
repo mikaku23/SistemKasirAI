@@ -142,7 +142,7 @@
             </label>
 
             <label class="form-field">
-                <span>Stock On Hand</span>
+                <span>Stock On Hand (otomatis dari batch)</span>
                 <input type="text" value="{{ $product->stock_on_hand !== null ? number_format((int) $product->stock_on_hand, 0, ',', '.') : '-' }}" disabled>
             </label>
 

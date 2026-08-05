@@ -67,6 +67,11 @@
       <a href="{{ route('stock-batches.index') }}" class="nav-item {{ $menu == 'stock-batches' ? 'active' : '' }}">
         <i class="icon fa-solid fa-boxes-stacked" aria-hidden="true"></i><span>Stock Batches</span>
       </a>
+
+      <a href="{{ route('stock-adjustments.index') }}" class="nav-item {{ $menu == 'stock-adjustments' ? 'active' : '' }}">
+        <i class="icon fa-solid fa-boxes-stacked" aria-hidden="true"></i><span>Stock Adjustments</span>
+      </a>
+
       <a href="{{ route('transactions.index') }}" class="nav-item {{ $menu == 'transactions' ? 'active' : '' }}">
         <i class="icon fa-solid fa-receipt" aria-hidden="true"></i><span>Transactions</span>
       </a>

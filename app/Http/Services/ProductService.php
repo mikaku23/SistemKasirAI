@@ -6,6 +6,7 @@ use App\Models\Categories;
 use App\Models\Location;
 use App\Models\Product;
 use App\Models\Product_keyword;
+use App\Models\StockBatches;
 use App\Models\Supplier;
 use App\Models\Unit;
 use Carbon\Carbon;
@@ -87,6 +88,7 @@ class ProductService
                 unset($payload['search_keywords']);
 
                 $payload['slug'] = $this->uniqueSlug($payload['slug']);
+                $payload['stock_on_hand'] = null;
 
                 $product = Product::create($payload);
                 $this->syncKeywords($product, $keywords);
@@ -105,6 +107,7 @@ class ProductService
     public function update(Product $product, array $data, ?UploadedFile $imageFile = null): Product
     {
         $payload = $this->normalizePayload($data, $product->id);
+        $payload['stock_on_hand'] = $this->refreshStockSnapshot($product->id) ?: null;
         $oldImagePath = $product->image;
         $storedImagePath = null;
 
@@ -156,6 +159,7 @@ class ProductService
         $product->restore();
 
         $this->syncKeywords($product, $this->normalizeKeywords($product->search_keywords));
+        $this->refreshStockSnapshot($product->id);
 
         return $product->refresh()->load(['category', 'unit', 'supplier', 'location']);
     }
@@ -254,6 +258,22 @@ class ProductService
         }
 
         Storage::disk('public')->delete($path);
+    }
+
+    protected function refreshStockSnapshot(int $productId): int
+    {
+        $stockOnHand = (int) StockBatches::query()
+            ->where('product_id', $productId)
+            ->whereNull('deleted_at')
+            ->sum('qty_remaining');
+
+        Product::query()
+            ->whereKey($productId)
+            ->update([
+                'stock_on_hand' => $stockOnHand > 0 ? $stockOnHand : null,
+            ]);
+
+        return $stockOnHand;
     }
 
     protected function normalizePayload(array $data, ?int $ignoreId = null): array

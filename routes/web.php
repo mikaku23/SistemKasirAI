@@ -7,6 +7,7 @@ use App\Http\Controllers\LocationController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductPromoSettingController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\StockAdjustmentController;
 use App\Http\Controllers\StockBatchController;
 use App\Http\Controllers\StockMovementController;
 use App\Http\Controllers\SupplierController;
@@ -82,6 +83,19 @@ Route::delete('stock-batches/{stock_batch}/force-delete', [StockBatchController:
 
 Route::resource('stock-batches', StockBatchController::class)
     ->parameters(['stock-batches' => 'stock_batch']);
+
+Route::get('stock-adjustments', [StockAdjustmentController::class, 'index'])->name('stock-adjustments.index');
+Route::get('stock-adjustments/create', [StockAdjustmentController::class, 'create'])->name('stock-adjustments.create');
+Route::post('stock-adjustments', [StockAdjustmentController::class, 'store'])->name('stock-adjustments.store');
+Route::get('stock-adjustments/{stock_adjustment}', [StockAdjustmentController::class, 'show'])
+    ->whereNumber('stock_adjustment')
+    ->name('stock-adjustments.show');
+Route::post('stock-adjustments/{stock_adjustment}/confirm-system', [StockAdjustmentController::class, 'confirmSystemCorrect'])
+    ->whereNumber('stock_adjustment')
+    ->name('stock-adjustments.confirm-system');
+Route::post('stock-adjustments/{stock_adjustment}/apply-correction', [StockAdjustmentController::class, 'applyCorrection'])
+    ->whereNumber('stock_adjustment')
+    ->name('stock-adjustments.apply-correction');
 
 Route::get('transactions/{transaction}/print', [TransactionController::class, 'print'])->whereNumber('transaction')->name('transactions.print');
 Route::get('transactions/barcode/{barcode}', [TransactionController::class, 'lookupBarcode'])->where('barcode', '[0-9]+')->name('transactions.barcode-lookup');
