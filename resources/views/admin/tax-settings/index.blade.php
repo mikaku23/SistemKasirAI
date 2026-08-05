@@ -31,14 +31,7 @@
             </a>
         </div>
     </div>
-
-    <div class="stats-grid">
-        <div class="stat-card glass-card"><span>Total</span><strong>{{ $taxStats['total'] }}</strong></div>
-        <div class="stat-card glass-card"><span>Active</span><strong>{{ $taxStats['active'] }}</strong></div>
-        <div class="stat-card glass-card"><span>Default</span><strong>{{ $taxStats['default'] }}</strong></div>
-        <div class="stat-card glass-card"><span>Recycle</span><strong>{{ $taxStats['trashed'] }}</strong></div>
-    </div>
-
+    
     <div class="table-card glass-card">
         <div class="table-card__head">
             <div>
@@ -86,9 +79,7 @@
                                     <a href="{{ route('tax-settings.show', $taxSetting->id) }}" class="icon-btn" aria-label="Show tax setting">
                                         <i class="fa-solid fa-eye" aria-hidden="true"></i>
                                     </a>
-                                    <a href="{{ route('tax-settings.edit', $taxSetting->id) }}" class="icon-btn" aria-label="Edit tax setting">
-                                        <i class="fa-solid fa-pen-to-square" aria-hidden="true"></i>
-                                    </a>
+                                
                                     <form action="{{ route('tax-settings.destroy', $taxSetting->id) }}" method="POST" class="inline-form" data-confirm-form data-confirm-title="Hapus setting pajak?" data-confirm-message="Setting pajak ini akan dipindahkan ke recycle bin. Lanjutkan?" data-confirm-variant="danger" data-confirm-icon="fa-solid fa-trash">
                                         @csrf
                                         @method('DELETE')

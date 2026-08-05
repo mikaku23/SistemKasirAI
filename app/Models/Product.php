@@ -38,6 +38,9 @@ class Product extends Model
         'expiry_grace_days',
         'promo_discount_amount',
         'promo_discount_is_active',
+        'promo_starts_at',
+        'promo_ends_at',
+        'promo_metadata',
         'is_featured',
         'is_available_online',
         'popularity_score',
@@ -59,6 +62,9 @@ class Product extends Model
         'expiry_grace_days' => 'integer',
         'promo_discount_amount' => 'integer',
         'promo_discount_is_active' => 'boolean',
+        'promo_starts_at' => 'datetime',
+        'promo_ends_at' => 'datetime',
+        'promo_metadata' => 'array',
         'is_featured' => 'boolean',
         'is_available_online' => 'boolean',
         'popularity_score' => 'decimal:2',
@@ -76,6 +82,13 @@ class Product extends Model
         'resolved_expiry_at',
         'expiry_summary',
         'effective_discount_amount',
+        'promo_status',
+        'promo_status_label',
+        'promo_status_class',
+        'promo_is_running',
+        'promo_remaining_days',
+        'promo_period_label',
+        'promo_effective_price',
     ];
 
     public function category()
@@ -130,11 +143,90 @@ class Product extends Model
 
     public function getEffectiveDiscountAmountAttribute(): int
     {
-        if (!$this->promo_discount_is_active) {
+        if (! $this->isPromoRunning()) {
             return 0;
         }
 
         return max(0, (int) $this->promo_discount_amount);
+    }
+
+    public function getPromoIsRunningAttribute(): bool
+    {
+        return $this->isPromoRunning();
+    }
+
+    public function getPromoRemainingDaysAttribute(): ?int
+    {
+        if (! $this->promo_ends_at) {
+            return null;
+        }
+
+        return now()->startOfDay()->diffInDays(
+            Carbon::parse($this->promo_ends_at)->startOfDay(),
+            false
+        );
+    }
+
+    public function getPromoPeriodLabelAttribute(): string
+    {
+        $start = $this->promo_starts_at ? Carbon::parse($this->promo_starts_at)->format('d M Y H:i') : '-';
+        $end = $this->promo_ends_at ? Carbon::parse($this->promo_ends_at)->format('d M Y H:i') : '-';
+
+        return $start . ' → ' . $end;
+    }
+
+    public function getPromoStatusAttribute(): string
+    {
+        if ((int) $this->promo_discount_amount <= 0) {
+            return 'inactive';
+        }
+
+        if (! $this->promo_discount_is_active) {
+            if ($this->promo_ends_at && Carbon::parse($this->promo_ends_at)->lt(now())) {
+                return 'expired';
+            }
+
+            if ($this->promo_starts_at && Carbon::parse($this->promo_starts_at)->gt(now())) {
+                return 'scheduled';
+            }
+
+            return 'inactive';
+        }
+
+        if ($this->promo_starts_at && Carbon::parse($this->promo_starts_at)->gt(now())) {
+            return 'scheduled';
+        }
+
+        if ($this->promo_ends_at && Carbon::parse($this->promo_ends_at)->lt(now())) {
+            return 'expired';
+        }
+
+        return 'active';
+    }
+
+    public function getPromoStatusLabelAttribute(): string
+    {
+        return match ($this->promo_status) {
+            'active' => 'Active',
+            'scheduled' => 'Scheduled',
+            'expired' => 'Expired',
+            default => 'Inactive',
+        };
+    }
+
+    public function getPromoStatusClassAttribute(): string
+    {
+        return match ($this->promo_status) {
+            'active' => 'status-pill--success',
+            'scheduled' => 'status-pill--warning',
+            'expired' => 'status-pill--danger',
+            default => 'status-pill--muted',
+        };
+    }
+
+    public function getPromoEffectivePriceAttribute(): int
+    {
+        return max(0, (int) $this->sale_price - (int) $this->effective_discount_amount);
     }
 
     public function getExpiryTypeLabelAttribute(): string
@@ -157,7 +249,7 @@ class Product extends Model
     {
         $resolved = $this->resolveExpiryDate();
 
-        if (!$resolved) {
+        if (! $resolved) {
             return null;
         }
 
@@ -166,13 +258,13 @@ class Product extends Model
 
     public function getExpiryStatusAttribute(): string
     {
-        if (!$this->tracks_expiry || $this->expiry_type === 'none') {
+        if (! $this->tracks_expiry || $this->expiry_type === 'none') {
             return 'no_tracking';
         }
 
         $resolved = $this->resolveExpiryDate();
 
-        if (!$resolved) {
+        if (! $resolved) {
             return 'unknown';
         }
 
@@ -221,13 +313,13 @@ class Product extends Model
 
     public function getExpirySummaryAttribute(): string
     {
-        if (!$this->tracks_expiry || $this->expiry_type === 'none') {
+        if (! $this->tracks_expiry || $this->expiry_type === 'none') {
             return 'Tidak dilacak';
         }
 
         $resolved = $this->resolveExpiryDate();
 
-        if (!$resolved) {
+        if (! $resolved) {
             return 'Data expiry belum lengkap';
         }
 
@@ -250,9 +342,28 @@ class Product extends Model
         return 'Sisa ' . $daysLeft . ' hari';
     }
 
+    protected function isPromoRunning(): bool
+    {
+        if ((int) $this->promo_discount_amount <= 0 || ! $this->promo_discount_is_active) {
+            return false;
+        }
+
+        $now = now();
+
+        if ($this->promo_starts_at && Carbon::parse($this->promo_starts_at)->gt($now)) {
+            return false;
+        }
+
+        if ($this->promo_ends_at && Carbon::parse($this->promo_ends_at)->lt($now)) {
+            return false;
+        }
+
+        return true;
+    }
+
     protected function resolveExpiryDate(): ?Carbon
     {
-        if (!$this->tracks_expiry || $this->expiry_type === 'none') {
+        if (! $this->tracks_expiry || $this->expiry_type === 'none') {
             return null;
         }
 

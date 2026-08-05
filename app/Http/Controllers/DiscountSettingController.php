@@ -34,7 +34,7 @@ class DiscountSettingController extends Controller
     {
         $setting = $this->discountSettingService->store($request->validated());
 
-        return redirect()->route('discount-settings.show', $setting->id)
+        return redirect()->route('discount-settings.index')
             ->with('success', 'Diskon berhasil ditambahkan.')
             ->with('success_detail', 'Kode diskon: ' . $setting->code);
     }

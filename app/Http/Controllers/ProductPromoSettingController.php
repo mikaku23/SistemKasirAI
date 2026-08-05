@@ -25,34 +25,39 @@ class ProductPromoSettingController extends Controller
 
     public function create(): View
     {
-        return view('admin.promo-settings.create', [
+        return view('admin.promo-settings.create', array_merge($this->promoService->referenceData(), [
             'menu' => 'promo-settings',
-            'products' => Product::query()->with(['category', 'unit'])->where('is_active', true)->orderBy('name')->get(),
-        ]);
+        ]));
     }
 
     public function store(ProductPromoSettingStoreRequest $request): RedirectResponse
     {
-        $this->promoService->store($request->validated());
+        $product = $this->promoService->store($request->validated());
 
         return redirect()
-            ->route('promo-settings.index')
+            ->route('promo-settings.index', ['product' => $product->id])
             ->with('success', 'Promo produk berhasil disimpan.');
     }
 
     public function show(Product $product): View
     {
+        $product->load(['category', 'unit']);
+
         return view('admin.promo-settings.show', [
             'menu' => 'promo-settings',
-            'product' => $product->load(['category', 'unit']),
+            'product' => $product,
+            'promo' => $this->promoService->payload($product),
         ]);
     }
 
     public function edit(Product $product): View
     {
+        $product->load(['category', 'unit']);
+
         return view('admin.promo-settings.edit', [
             'menu' => 'promo-settings',
-            'product' => $product->load(['category', 'unit']),
+            'product' => $product,
+            'promo' => $this->promoService->payload($product),
         ]);
     }
 
@@ -61,7 +66,16 @@ class ProductPromoSettingController extends Controller
         $this->promoService->update($product, $request->validated());
 
         return redirect()
-            ->route('promo-settings.index')
+            ->route('promo-settings.show', ['product' => $product->id])
             ->with('success', 'Promo produk berhasil diperbarui.');
+    }
+
+    public function destroy(Product $product): RedirectResponse
+    {
+        $this->promoService->reset($product);
+
+        return redirect()
+            ->route('promo-settings.index')
+            ->with('success', 'Promo produk berhasil dihapus permanen.');
     }
 }

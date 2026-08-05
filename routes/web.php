@@ -101,18 +101,23 @@ Route::delete('tax-settings/{tax_setting}/force-delete', [TaxSettingController::
     ->name('tax-settings.forceDelete');
 Route::resource('tax-settings', TaxSettingController::class);
 
-Route::resource('promo-settings', ProductPromoSettingController::class)->only([
-    'index',
-    'create',
-    'store',
-    'show',
-    'edit',
-    'update',
-]);
+Route::resource('promo-settings', ProductPromoSettingController::class)
+    ->parameters(['promo-settings' => 'product'])
+    ->only([
+        'index',
+        'create',
+        'store',
+        'show',
+        'edit',
+        'update',
+        'destroy',
+    ]);
 
 Route::get('discount-settings/recycle', [DiscountSettingController::class, 'recycle'])->name('discount-settings.recycle');
 Route::post('discount-settings/{discount_setting}/restore', [DiscountSettingController::class, 'restore'])->whereNumber('discount_setting')->name('discount-settings.restore');
 Route::delete('discount-settings/{discount_setting}/force-delete', [DiscountSettingController::class, 'forceDelete'])->whereNumber('discount_setting')->name('discount-settings.forceDelete');
 Route::resource('discount-settings', DiscountSettingController::class);
+
+
 
 
