@@ -92,11 +92,11 @@ class StockAdjustmentService
                 'metadata' => [
                     'comparison' => $differenceQty === 0 ? 'match' : ($differenceQty > 0 ? 'overage' : 'shortage'),
                     'review_status' => $differenceQty === 0 ? 'matched' : 'pending_review',
-                    'review_status_label' => $differenceQty === 0 ? 'Input cocok dengan sistem' : 'Menunggu verifikasi',
-                    'review_action_label' => $differenceQty === 0 ? 'Tidak ada perubahan' : 'Pilih tindakan di popup',
+                    'review_status_label' => $differenceQty === 0 ? 'Data cocok dengan sistem' : ($differenceQty > 0 ? 'Stok fisik lebih' : 'Stok fisik kurang'),
+                    'review_action_label' => $differenceQty === 0 ? 'Tidak ada perubahan' : ($differenceQty > 0 ? 'Tambah batch baru atau abaikan input' : 'Kurangi batch terdekat atau abaikan input'),
                     'system_action_text' => $differenceQty === 0
-                        ? 'Stok tetap sama.'
-                        : 'Data tersimpan, menunggu keputusan.',
+                        ? 'Stok dipertahankan.'
+                        : ($differenceQty > 0 ? 'Selisih positif menunggu konfirmasi penambahan batch.' : 'Selisih negatif menunggu konfirmasi pengurangan stok.'),
                     'system_qty_before' => $systemQty,
                     'physical_qty_input' => $physicalQty,
                     'difference_qty' => $differenceQty,
@@ -119,17 +119,16 @@ class StockAdjustmentService
             return $adjustment->fresh()->load(['product.category', 'product.unit', 'stockBatch', 'location', 'user']);
         });
     }
-
-    public function confirmSystemCorrect(StockAdjustment $adjustment, ?User $user = null): StockAdjustment
+public function confirmSystemCorrect(StockAdjustment $adjustment, ?User $user = null): StockAdjustment
     {
         return DB::transaction(function () use ($adjustment, $user) {
             $adjustment = StockAdjustment::query()->lockForUpdate()->findOrFail($adjustment->id);
 
             $metadata = $adjustment->metadata ?? [];
             $metadata['review_status'] = 'system_correct';
-            $metadata['review_status_label'] = 'Input ditolak, stok sistem dipertahankan';
+            $metadata['review_status_label'] = 'Input pengecekan ditolak, stok sistem dipertahankan';
             $metadata['review_action_label'] = 'Sistem benar';
-            $metadata['system_action_text'] = 'Stok tidak diubah.';
+            $metadata['system_action_text'] = 'Tidak ada perubahan stok.';
             $metadata['reviewed_by'] = $user?->id ?? auth()->id();
             $metadata['reviewed_by_name'] = $user?->name ?? auth()->user()?->name;
             $metadata['reviewed_at'] = now()->toIso8601String();
@@ -160,9 +159,9 @@ class StockAdjustmentService
             if ($delta === 0) {
                 $metadata = $adjustment->metadata ?? [];
                 $metadata['review_status'] = 'matched';
-                $metadata['review_status_label'] = 'Input cocok dengan sistem';
+                $metadata['review_status_label'] = 'Data cocok dengan sistem';
                 $metadata['review_action_label'] = 'Tidak ada perubahan';
-                $metadata['system_action_text'] = 'Stok tetap sama.';
+                $metadata['system_action_text'] = 'Stok dipertahankan.';
                 $metadata['reviewed_by'] = $user?->id ?? auth()->id();
                 $metadata['reviewed_by_name'] = $user?->name ?? auth()->user()?->name;
                 $metadata['reviewed_at'] = now()->toIso8601String();
@@ -181,13 +180,20 @@ class StockAdjustmentService
 
             $metadata = $adjustment->metadata ?? [];
             $metadata['review_status'] = 'system_updated';
-            $metadata['review_status_label'] = 'Stok sistem diperbarui';
-            $metadata['review_action_label'] = 'Data fisik diikuti';
-            $metadata['system_action_text'] = 'Stok batch dan product sudah disesuaikan.';
+            $metadata['review_status_label'] = $delta > 0
+                ? 'Stok sistem ditambah dari batch manual'
+                : 'Stok sistem dikurangi mengikuti hasil pengecekan';
+            $metadata['review_action_label'] = $delta > 0
+                ? 'Batch tambahan dibuat'
+                : 'Batch tambahan dihapus dulu, lalu batch terdekat disesuaikan';
+            $metadata['system_action_text'] = $delta > 0
+                ? 'Selisih positif disimpan sebagai batch tambahan.'
+                : 'Selisih negatif mengurangi batch tambahan lebih dulu, lalu batch terdekat.';
             $metadata['system_qty_revalidated'] = $currentStock;
             $metadata['system_qty_after'] = $newStock;
             $metadata['applied_delta'] = $delta;
             $metadata['applied_batches'] = $changedBatches;
+            $metadata['deleted_batches'] = array_values(array_filter($changedBatches, fn (array $item): bool => (bool) data_get($item, 'deleted', false)));
             $metadata['reviewed_by'] = $user?->id ?? auth()->id();
             $metadata['reviewed_by_name'] = $user?->name ?? auth()->user()?->name;
             $metadata['reviewed_at'] = now()->toIso8601String();
@@ -203,6 +209,7 @@ class StockAdjustmentService
             return $adjustment->fresh()->load(['product.category', 'product.unit', 'stockBatch', 'location', 'user']);
         });
     }
+
 
     public function payload(StockAdjustment $adjustment): array
     {
@@ -229,6 +236,7 @@ class StockAdjustmentService
             'physical_qty' => (int) $adjustment->physical_qty,
             'difference_qty' => (int) $adjustment->difference_qty,
             'difference_label' => $adjustment->difference_label,
+            'difference_sign' => $adjustment->difference_qty > 0 ? 'plus' : ($adjustment->difference_qty < 0 ? 'minus' : 'neutral'),
             'difference_direction_label' => $adjustment->difference_direction_label,
             'review_status' => $adjustment->review_status,
             'review_status_label' => $adjustment->review_status_label,
@@ -284,41 +292,40 @@ class StockAdjustmentService
             ->values();
     }
 
-    protected function increaseStock(Product $product, int $quantity, ?int $locationId, StockAdjustment $adjustment, ?User $user = null): array
+    protected function sortableBatchesForDecrease(int $productId): Collection
     {
-        $referenceBatch = $this->selectReferenceBatch($product->id);
+        return StockBatches::query()
+            ->with('product')
+            ->where('product_id', $productId)
+            ->whereNull('deleted_at')
+            ->where('qty_remaining', '>', 0)
+            ->get()
+            ->sort(function (StockBatches $left, StockBatches $right) {
+                return $this->correctionBatchSortKey($left) <=> $this->correctionBatchSortKey($right);
+            })
+            ->values();
+    }
 
-        if ($referenceBatch) {
-            $before = (int) $referenceBatch->qty_remaining;
-            $after = $before + $quantity;
+    protected function isAdjustmentGeneratedBatch(StockBatches $batch): bool
+    {
+        return data_get($batch->metadata, 'source') === 'stock_adjustment';
+    }
 
-            $referenceBatch->forceFill([
-                'qty_remaining' => $after,
-                'status' => $this->resolveBatchStatus($referenceBatch, $after),
-            ])->save();
+    protected function correctionBatchSortKey(StockBatches $batch): array
+    {
+        $isAdjustment = $this->isAdjustmentGeneratedBatch($batch) ? 0 : 1;
+        $adjustmentRecency = $this->isAdjustmentGeneratedBatch($batch)
+            ? -((int) optional($batch->created_at)->timestamp)
+            : PHP_INT_MAX;
+        $daysLeft = $batch->expiry_days_left;
+        $expiryRank = $daysLeft === null ? PHP_INT_MAX : (int) $daysLeft;
+        $productionRank = $batch->production_date ? Carbon::parse($batch->production_date)->timestamp : PHP_INT_MAX;
+        $receivedRank = $batch->received_at ? Carbon::parse($batch->received_at)->timestamp : PHP_INT_MAX;
 
-            $this->createMovement(
-                product: $product,
-                batch: $referenceBatch,
-                movementType: 'adjustment',
-                quantity: $quantity,
-                locationId: $locationId,
-                user: $user,
-                adjustment: $adjustment,
-                direction: 'in',
-                notes: 'Koreksi stok manual (stok fisik lebih banyak).'
-            );
-
-            return [[
-                'batch_id' => $referenceBatch->id,
-                'batch_code' => $referenceBatch->batch_code,
-                'quantity' => $quantity,
-                'before' => $before,
-                'after' => $after,
-                'direction' => 'in',
-            ]];
-        }
-
+        return [$isAdjustment, $adjustmentRecency, $expiryRank, $productionRank, $receivedRank, $batch->id];
+    }
+protected function increaseStock(Product $product, int $quantity, ?int $locationId, StockAdjustment $adjustment, ?User $user = null): array
+    {
         $createdBatch = $this->createAdjustmentBatch($product, $quantity, $locationId, $adjustment, $user);
 
         return [[
@@ -328,12 +335,14 @@ class StockAdjustmentService
             'before' => 0,
             'after' => (int) $createdBatch->qty_remaining,
             'direction' => 'in',
+            'source' => 'stock_adjustment',
+            'deleted' => false,
         ]];
     }
 
     protected function decreaseStock(Product $product, int $quantity, ?int $locationId, StockAdjustment $adjustment, ?User $user = null): array
     {
-        $batches = $this->sortableBatches($product->id);
+        $batches = $this->sortableBatchesForDecrease($product->id);
         $remaining = $quantity;
         $changes = [];
 
@@ -349,6 +358,7 @@ class StockAdjustmentService
 
             $take = min($before, $remaining);
             $after = $before - $take;
+            $isAdjustmentBatch = $this->isAdjustmentGeneratedBatch($batch);
 
             $batch->forceFill([
                 'qty_remaining' => $after,
@@ -364,8 +374,20 @@ class StockAdjustmentService
                 user: $user,
                 adjustment: $adjustment,
                 direction: 'out',
-                notes: 'Koreksi stok manual (stok fisik lebih sedikit).'
+                notes: $isAdjustmentBatch
+                    ? 'Koreksi stok manual: batch tambahan dari pengecekan sebelumnya dikurangi lebih dulu.'
+                    : 'Koreksi stok manual: batch dengan expiry terdekat dikurangi.'
             );
+
+            $deleted = false;
+
+            if ($after <= 0 && $isAdjustmentBatch) {
+                $batch->forceFill([
+                    'status' => 'finished',
+                ])->save();
+                $batch->delete();
+                $deleted = true;
+            }
 
             $changes[] = [
                 'batch_id' => $batch->id,
@@ -374,6 +396,8 @@ class StockAdjustmentService
                 'before' => $before,
                 'after' => $after,
                 'direction' => 'out',
+                'source' => $isAdjustmentBatch ? 'stock_adjustment' : 'stock_batch',
+                'deleted' => $deleted,
             ];
 
             $remaining -= $take;
@@ -404,12 +428,22 @@ class StockAdjustmentService
             'expired_at' => null,
             'received_at' => now()->toDateString(),
             'status' => 'active',
-            'notes' => 'Batch koreksi stok manual.',
+            'notes' => 'Batch tambahan dari pengecekan manual.',
             'metadata' => [
                 'source' => 'stock_adjustment',
+                'source_label' => 'Pengecekan manual',
                 'adjustment_id' => $adjustment->id,
                 'adjustment_code' => $adjustment->adjustment_code,
                 'direction' => 'in',
+                'added_at' => now()->toIso8601String(),
+                'added_by' => $user?->id ?? auth()->id(),
+                'added_by_name' => $user?->name ?? auth()->user()?->name,
+                'expiry_mode' => 'none',
+                'production_date' => null,
+                'expired_at' => null,
+                'shelf_life_days' => null,
+                'expiry_warning_days' => null,
+                'expiry_grace_days' => null,
             ],
         ]);
 
@@ -422,7 +456,7 @@ class StockAdjustmentService
             user: $user,
             adjustment: $adjustment,
             direction: 'in',
-            notes: 'Koreksi stok manual (batch baru).'
+            notes: 'Selisih positif ditambahkan sebagai batch baru.'
         );
 
         return $batch;
@@ -475,11 +509,14 @@ class StockAdjustmentService
                 'stock_on_hand' => $stock > 0 ? $stock : null,
             ]);
 
+        app(ProductService::class)->refreshExpirySnapshot($productId);
+
         return $stock;
     }
 
     protected function resolveBatchStatus(StockBatches $batch, int $qtyRemaining): string
     {
+
         if ($qtyRemaining <= 0) {
             return 'finished';
         }

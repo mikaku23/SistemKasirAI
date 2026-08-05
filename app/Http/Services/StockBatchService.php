@@ -234,6 +234,9 @@ class StockBatchService
             'location_name' => optional($stockBatch->location)->name,
             'received_by' => $stockBatch->received_by,
             'receiver_name' => optional($stockBatch->receiver)->name,
+            'added_at' => optional($stockBatch->received_at)->format('d M Y'),
+            'added_by_id' => $stockBatch->received_by,
+            'added_by_name' => optional($stockBatch->receiver)->name,
             'batch_code' => $stockBatch->batch_code,
             'lot_number' => $stockBatch->lot_number,
             'batch_code_pattern' => $this->batchCodePattern($receivedAt, (int) $stockBatch->qty_received, $productionDate),
@@ -408,6 +411,8 @@ class StockBatchService
             ->update([
                 'stock_on_hand' => max(0, (int) round((float) $stockOnHand)),
             ]);
+
+        app(ProductService::class)->refreshExpirySnapshot($productId);
     }
 
     protected function buildBatchCode(StockBatches $batch): string

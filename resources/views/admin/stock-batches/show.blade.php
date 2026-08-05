@@ -59,11 +59,11 @@
             <strong>{{ $stockBatch->expiry_summary }}</strong>
         </div>
         <div class="stat-card glass-card">
-            <span>Qty Remaining</span>
+            <span>Sisa Stok</span>
             <strong>{{ $formatQty($stockBatch->qty_remaining) }}</strong>
         </div>
         <div class="stat-card glass-card">
-            <span>Received At</span>
+            <span>Ditambahkan Pada</span>
             <strong>{{ $stockBatch->received_at ? $stockBatch->received_at->format('d M Y') : '-' }}</strong>
         </div>
     </div>
@@ -96,8 +96,13 @@
             </label>
 
             <label class="form-field">
-                <span>Received By</span>
+                <span>Ditambahkan Oleh</span>
                 <input type="text" value="{{ optional($stockBatch->receiver)->name ?? '-' }}" disabled>
+            </label>
+
+            <label class="form-field">
+                <span>Sumber Data</span>
+                <input type="text" value="{{ data_get($metadata, 'source_label', 'Penerimaan batch') }}" disabled>
             </label>
 
             <label class="form-field">

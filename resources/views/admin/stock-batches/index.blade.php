@@ -132,7 +132,7 @@
                         <th>Qty Remaining</th>
                         <th>Expiry</th>
                         <th>Status</th>
-                        <th>Received At</th>
+                        <th>Ditambahkan Pada</th>
                         <th class="th-actions">Actions</th>
                     </tr>
                 </thead>

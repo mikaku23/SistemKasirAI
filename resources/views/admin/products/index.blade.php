@@ -5,6 +5,111 @@
 @section('css')
 <link rel="stylesheet" href="{{ asset('assets/css/layout.css') }}">
 
+<style>
+    .adjustment-modal {
+        position: fixed;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 18px;
+        background: rgba(3, 7, 18, 0.62);
+        z-index: 1080;
+    }
+
+    .adjustment-modal.is-open {
+        display: flex;
+    }
+
+    .adjustment-modal__panel {
+        width: min(100%, 920px);
+        max-height: min(92vh, 920px);
+        overflow: auto;
+        border-radius: 24px;
+        background: #0f172a;
+        color: #e5e7eb;
+        box-shadow: 0 28px 90px rgba(0, 0, 0, 0.35);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .adjustment-modal__head,
+    .adjustment-modal__body,
+    .adjustment-modal__foot {
+        padding: 18px 20px;
+    }
+
+    .adjustment-modal__head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .adjustment-modal__title h3 {
+        margin: 0;
+        font-size: 22px;
+    }
+
+    .adjustment-modal__title p {
+        margin: 4px 0 0;
+        color: rgba(229, 231, 235, 0.72);
+        font-size: 13px;
+    }
+
+    .adjustment-modal__close {
+        border: 0;
+        background: rgba(255, 255, 255, 0.08);
+        color: #fff;
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        cursor: pointer;
+    }
+
+    .adjustment-card {
+        padding: 14px;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .adjustment-card span {
+        display: block;
+        font-size: 12px;
+        color: rgba(229, 231, 235, 0.7);
+        margin-bottom: 6px;
+    }
+
+    .adjustment-card strong {
+        display: block;
+        font-size: 18px;
+    }
+
+    .adjustment-meta {
+        display: grid;
+        gap: 14px;
+        margin-top: 14px;
+    }
+
+    .expiry-trigger {
+        border: 0;
+        cursor: pointer;
+        text-align: left;
+    }
+
+    .expiry-trigger:focus-visible {
+        outline: 2px solid rgba(99, 102, 241, 0.75);
+        outline-offset: 2px;
+    }
+
+    @media (max-width: 768px) {
+        .adjustment-modal {
+            padding: 12px;
+        }
+    }
+</style>
+
 @endsection
 
 @section('content')
@@ -155,14 +260,32 @@
                             <td class="td-strong">{{ $product->name }}</td>
                           
                             <td>
-                                <div>
-                                    <span class="status-pill {{ $product->expiry_status_class }}">{{ $product->expiry_status_label }}</span>
-                                    <small style="display:block; margin-top:6px;">
-                                        {{ $product->expiry_summary }}
-                                        @if ($product->resolved_expiry_at)
-                                            · {{ \Illuminate\Support\Carbon::parse($product->resolved_expiry_at)->format('d M Y') }}
-                                        @endif
-                                    </small>
+                                <div style="display:grid; gap:6px;">
+                                    @if ((int) $product->expiry_snapshot_count > 0)
+                                        <button
+                                            type="button"
+                                            class="status-pill expiry-trigger {{ $product->expiry_status_class }}"
+                                            style="border:0; width:fit-content;"
+                                            data-product-expiry-trigger
+                                            data-product-name="{{ e($product->name) }}"
+                                            data-product-expiry='@json($product->expiry_snapshot_items)'>
+                                            {{ $product->expiry_snapshot_count }} data expiry
+                                        </button>
+                                        <small style="display:block;">
+                                            {{ $product->expiry_summary }}
+                                            @if ($product->resolved_expiry_at)
+                                                · {{ \Illuminate\Support\Carbon::parse($product->resolved_expiry_at)->format('d M Y') }}
+                                            @endif
+                                        </small>
+                                    @else
+                                        <span class="status-pill {{ $product->expiry_status_class }}">{{ $product->expiry_status_label }}</span>
+                                        <small style="display:block; margin-top:6px;">
+                                            {{ $product->expiry_summary }}
+                                            @if ($product->resolved_expiry_at)
+                                                · {{ \Illuminate\Support\Carbon::parse($product->resolved_expiry_at)->format('d M Y') }}
+                                            @endif
+                                        </small>
+                                    @endif
                                 </div>
                             </td>
                             <td>{{ $product->sale_price !== null ? 'Rp ' . number_format((float) $product->sale_price, 0, ',', '.') : '-' }}</td>
@@ -251,9 +374,114 @@
         </div>
     </div>
 </section>
+
+<div class="adjustment-modal" id="productExpiryModal" aria-hidden="true">
+    <div class="adjustment-modal__panel" role="dialog" aria-modal="true" aria-labelledby="productExpiryModalTitle">
+        <div class="adjustment-modal__head">
+            <div class="adjustment-modal__title">
+                <h3 id="productExpiryModalTitle">Detail expiry batches</h3>
+                <p id="productExpiryModalSubtitle">Klik angka expiry untuk melihat detail per batch.</p>
+            </div>
+            <button type="button" class="adjustment-modal__close" data-product-expiry-close aria-label="Tutup">
+                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+            </button>
+        </div>
+        <div class="adjustment-modal__body">
+            <div id="productExpiryList" class="adjustment-meta" style="grid-template-columns: 1fr; gap: 12px;"></div>
+        </div>
+        <div class="adjustment-modal__foot">
+            <button type="button" class="btn btn--secondary" data-product-expiry-close>Tutup</button>
+        </div>
+    </div>
+</div>
+
 @endsection
 
 @section('js')
 <script src="{{ asset('assets/js/layout.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const modal = document.getElementById('productExpiryModal');
+    const subtitle = document.getElementById('productExpiryModalSubtitle');
+    const list = document.getElementById('productExpiryList');
+
+    const statusOrder = {
+        grace_period: 0,
+        expired: 1,
+        expires_today: 2,
+        expiring_soon: 3,
+        active: 4,
+        depleted: 5,
+        no_tracking: 6,
+        sync_pending: 6,
+        unknown: 7,
+    };
+
+    const formatQty = (value) => {
+        const number = Number(value ?? 0);
+        return Number.isFinite(number) ? number.toLocaleString('id-ID') : '-';
+    };
+
+    const renderItem = (item) => {
+        const card = document.createElement('div');
+        card.className = 'adjustment-card';
+        card.innerHTML = `
+            <span>${item.batch_code || '-'}</span>
+            <strong>${item.expiry_status_label || 'Unknown'}</strong>
+            <div class="d-flex flex-wrap gap-2 mt-2">
+                <span class="status-pill ${item.expiry_status_class || 'status-pill--muted'}">${item.expiry_summary || '-'}</span>
+            </div>
+            <div class="mt-2" style="font-size: 13px; line-height: 1.6;">
+                <div>Qty remaining: <strong>${formatQty(item.qty_remaining)}</strong></div>
+                <div>Expired at: <strong>${item.resolved_expiry_at || '-'}</strong></div>
+                <div>Ditambahkan: <strong>${item.added_at_label || item.added_at || '-'}</strong></div>
+                <div>Oleh: <strong>${item.added_by_name || '-'}</strong></div>
+                <div>Source: <strong>${item.source_label || '-'}</strong></div>
+            </div>
+        `;
+        return card;
+    };
+
+    const openModal = (productName, items) => {
+        const ordered = [...items].sort((a, b) => {
+            const ar = statusOrder[a.expiry_status] ?? 99;
+            const br = statusOrder[b.expiry_status] ?? 99;
+            if (ar !== br) return ar - br;
+            const ad = Number(a.expiry_days_left ?? 99999);
+            const bd = Number(b.expiry_days_left ?? 99999);
+            if (ad !== bd) return ad - bd;
+            return Number(a.batch_id ?? 0) - Number(b.batch_id ?? 0);
+        });
+
+        subtitle.textContent = `${productName} · ${ordered.length} batch expiry`;
+        list.innerHTML = '';
+        ordered.forEach(item => list.appendChild(renderItem(item)));
+        modal.classList.add('is-open');
+        modal.setAttribute('aria-hidden', 'false');
+    };
+
+    const closeModal = () => {
+        modal.classList.remove('is-open');
+        modal.setAttribute('aria-hidden', 'true');
+    };
+
+    document.querySelectorAll('[data-product-expiry-trigger]').forEach((button) => {
+        button.addEventListener('click', () => {
+            const items = JSON.parse(button.dataset.productExpiry || '[]');
+            openModal(button.dataset.productName || '-', items);
+        });
+    });
+
+    document.querySelectorAll('[data-product-expiry-close]').forEach((button) => {
+        button.addEventListener('click', closeModal);
+    });
+
+    modal?.addEventListener('click', (event) => {
+        if (event.target === modal) {
+            closeModal();
+        }
+    });
+});
+</script>
 
 @endsection

@@ -29,8 +29,8 @@
     $selectedSupplierLabel = $selectedSupplierId ? ($supplierMap[$selectedSupplierId] ?? '-') : '-';
     $selectedLocationLabel = $selectedLocationId ? ($locationMap[$selectedLocationId] ?? '-') : '-';
 
-    $selectedTracksExpiry = old('tracks_expiry', $product?->tracks_expiry ? 1 : 0);
-    $selectedExpiryType = old('expiry_type', $product?->expiry_type ?: 'fixed_date');
+    $selectedTracksExpiry = old('tracks_expiry', 1);
+    $selectedExpiryType = old('expiry_type', $product?->expiry_type ?: 'none');
     $selectedProductionDate = old('production_date', $product?->production_date?->format('Y-m-d') ?? '');
     $selectedExpiredAt = old('expired_at', $product?->expired_at?->format('Y-m-d') ?? '');
     $selectedShelfLifeDays = old('shelf_life_days', $product?->shelf_life_days);
@@ -39,8 +39,8 @@
 
     $reviewResolvedExpiryAt = '-';
     $reviewDaysLeft = null;
-    $reviewExpiryStatus = $product?->expiry_status ?? 'no_tracking';
-    $reviewExpiryStatusLabel = $product?->expiry_status_label ?? 'No Tracking';
+    $reviewExpiryStatus = $product?->expiry_status ?? 'sync_pending';
+    $reviewExpiryStatusLabel = $product?->expiry_status_label ?? 'Auto from batches';
     $reviewExpiryStatusClass = $product?->expiry_status_class ?? 'status-pill--muted';
 
     if ((int) $selectedTracksExpiry === 1) {
@@ -65,6 +65,8 @@
             } else {
                 $reviewExpiryStatus = 'safe';
             }
+        } elseif ($selectedExpiryType === 'none') {
+            $reviewExpiryStatus = 'sync_pending';
         }
     }
 
@@ -74,6 +76,7 @@
         'expires_today' => 'Expires Today',
         'expiring_soon' => 'Expiring Soon',
         'safe' => 'Safe',
+        'sync_pending' => 'Auto from batches',
         default => 'No Tracking',
     };
 
@@ -81,6 +84,7 @@
         'expired' => 'status-pill--danger',
         'grace_period', 'expires_today', 'expiring_soon' => 'status-pill--warning',
         'safe' => 'status-pill--success',
+        'sync_pending' => 'status-pill--muted',
         default => 'status-pill--muted',
     };
 
@@ -90,9 +94,9 @@
         'expires_today' => 'Expired hari ini',
         'expiring_soon' => $reviewDaysLeft === 1 ? 'Sisa 1 hari' : 'Sisa ' . ($reviewDaysLeft ?? 0) . ' hari',
         'safe' => $reviewDaysLeft === 1 ? 'Sisa 1 hari' : 'Sisa ' . ($reviewDaysLeft ?? 0) . ' hari',
+        'sync_pending' => 'Akan disinkronkan dari batches',
         default => 'Tidak dilacak',
-    };
-@endphp
+    };@endphp
 
 <section class="page-card glass-card product-page">
     <div class="page-card__head">
@@ -305,46 +309,58 @@
                         <small class="text-muted">Nilai ini akan disinkronkan otomatis dari total qty remaining semua batch.</small>
                     </label>
 
-                    <label class="form-field">
-                        <span>Tracks Expiry</span>
-                        <select name="tracks_expiry" required>
-                            <option value="1" {{ old('tracks_expiry', $product->tracks_expiry ? 1 : 0) == 1 ? 'selected' : '' }}>Yes</option>
-                            <option value="0" {{ old('tracks_expiry', $product->tracks_expiry ? 1 : 0) == 0 ? 'selected' : '' }}>No</option>
-                        </select>
-                    </label>
+                    <div class="form-field form-field--full">
+                        <span>Expiry Sync (otomatis dari batch)</span>
+                        <div class="form-alert form-alert--info" style="margin-top:10px;">
+                            <strong>Data expiry product tersinkron dari batches.</strong>
+                            <span>Field di bawah hanya informasi baca saja. Saat batch bertambah atau berubah, product akan ikut diperbarui otomatis.</span>
+                        </div>
+                        <input type="hidden" name="tracks_expiry" value="1">
+                        <input type="hidden" name="expiry_type" value="none">
+                        <div class="wizard-form-grid" style="margin-top: 12px;">
+                            <label class="form-field">
+                                <span>Tracks Expiry</span>
+                                <select name="tracks_expiry" disabled>
+                                    <option value="1" {{ (int) old('tracks_expiry', $product->tracks_expiry ? 1 : 0) === 1 ? 'selected' : '' }}>Yes</option>
+                                    <option value="0" {{ (int) old('tracks_expiry', $product->tracks_expiry ? 1 : 0) === 0 ? 'selected' : '' }}>No</option>
+                                </select>
+                            </label>
 
-                    <label class="form-field">
-                        <span>Expiry Type</span>
-                        <select name="expiry_type" required>
-                            <option value="fixed_date" {{ old('expiry_type', $product->expiry_type) === 'fixed_date' ? 'selected' : '' }}>Fixed Date</option>
-                            <option value="shelf_life" {{ old('expiry_type', $product->expiry_type) === 'shelf_life' ? 'selected' : '' }}>Shelf Life</option>
-                        </select>
-                    </label>
+                            <label class="form-field">
+                                <span>Expiry Type</span>
+                                <select name="expiry_type" disabled>
+                                    <option value="none" {{ ($product->expiry_type ?? 'none') === 'none' ? 'selected' : '' }}>Auto from batches</option>
+                                    <option value="fixed_date" {{ old('expiry_type', $product->expiry_type) === 'fixed_date' ? 'selected' : '' }}>Fixed Date</option>
+                                    <option value="shelf_life" {{ old('expiry_type', $product->expiry_type) === 'shelf_life' ? 'selected' : '' }}>Shelf Life</option>
+                                </select>
+                            </label>
 
-                    <label class="form-field">
-                        <span>Production Date</span>
-                        <input type="date" name="production_date" value="{{ old('production_date', $product?->production_date?->format('Y-m-d') ?? '') }}">
-                    </label>
+                            <label class="form-field">
+                                <span>Production Date</span>
+                                <input type="date" name="production_date" value="{{ old('production_date', $product?->production_date?->format('Y-m-d') ?? '') }}" disabled>
+                            </label>
 
-                    <label class="form-field">
-                        <span>Expired At</span>
-                        <input type="date" name="expired_at" value="{{ old('expired_at', $product?->expired_at?->format('Y-m-d') ?? '') }}">
-                    </label>
+                            <label class="form-field">
+                                <span>Expired At</span>
+                                <input type="date" name="expired_at" value="{{ old('expired_at', $product?->expired_at?->format('Y-m-d') ?? '') }}" disabled>
+                            </label>
 
-                    <label class="form-field">
-                        <span>Shelf Life Days</span>
-                        <input type="number" name="shelf_life_days" value="{{ old('shelf_life_days', $product->shelf_life_days) }}" min="1" step="1" placeholder="365">
-                    </label>
+                            <label class="form-field">
+                                <span>Shelf Life Days</span>
+                                <input type="number" name="shelf_life_days" value="{{ old('shelf_life_days', $product->shelf_life_days) }}" min="1" step="1" placeholder="365" disabled>
+                            </label>
 
-                    <label class="form-field">
-                        <span>Expiry Warning Days</span>
-                        <input type="number" name="expiry_warning_days" value="{{ old('expiry_warning_days', $product->expiry_warning_days) }}" min="0" step="1" placeholder="30">
-                    </label>
+                            <label class="form-field">
+                                <span>Expiry Warning Days</span>
+                                <input type="number" name="expiry_warning_days" value="{{ old('expiry_warning_days', $product->expiry_warning_days) }}" min="0" step="1" placeholder="30" disabled>
+                            </label>
 
-                    <label class="form-field">
-                        <span>Expiry Grace Days</span>
-                        <input type="number" name="expiry_grace_days" value="{{ old('expiry_grace_days', $product->expiry_grace_days) }}" min="0" step="1" placeholder="0">
-                    </label>
+                            <label class="form-field">
+                                <span>Expiry Grace Days</span>
+                                <input type="number" name="expiry_grace_days" value="{{ old('expiry_grace_days', $product->expiry_grace_days) }}" min="0" step="1" placeholder="0" disabled>
+                            </label>
+                        </div>
+                    </div>
 
                     <label class="form-field">
                         <span>Popularity Score</span>

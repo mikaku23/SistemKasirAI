@@ -20,10 +20,10 @@ class ProductStoreRequest extends FormRequest
         $name = trim((string) $this->input('name'));
         $slugInput = trim((string) $this->input('slug'));
 
-        $tracksExpiry = $this->boolean('tracks_expiry');
+        $tracksExpiry = $this->has('tracks_expiry') ? $this->boolean('tracks_expiry') : true;
         $expiryType = strtolower(trim((string) $this->input('expiry_type', 'none')));
 
-        if (!$tracksExpiry) {
+        if (! $tracksExpiry) {
             $expiryType = 'none';
         }
 
@@ -63,7 +63,7 @@ class ProductStoreRequest extends FormRequest
     public function rules(): array
     {
         $expiryTypeRules = $this->boolean('tracks_expiry')
-            ? ['required', Rule::in(['fixed_date', 'shelf_life'])]
+            ? ['required', Rule::in(['none', 'fixed_date', 'shelf_life'])]
             : ['nullable', Rule::in(['none', 'fixed_date', 'shelf_life'])];
 
         return [

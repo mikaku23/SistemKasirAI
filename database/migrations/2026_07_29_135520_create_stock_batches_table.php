@@ -25,7 +25,7 @@ return new class extends Migration
             $table->date('production_date')->nullable();
             $table->date('expired_at')->nullable();
             $table->date('received_at');
-            $table->enum('status', ['active', 'near_expired', 'expired', 'finished'])->default('active');
+            $table->enum('status', ['active', 'near_expired', 'expired', 'finished', 'depleted', 'no_tracking', 'unknown', 'grace_period', 'expires_today', 'expiring_soon'])->default('active');
             $table->text('notes')->nullable();
             $table->json('metadata')->nullable();
             $table->timestamps();

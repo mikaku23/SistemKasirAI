@@ -37,6 +37,6 @@ class TransactionItem extends Model
 
     public function stockBatch()
     {
-        return $this->belongsTo(StockBatches::class);
+        return $this->belongsTo(StockBatches::class)->withTrashed();
     }
 }

@@ -89,6 +89,11 @@ class ProductService
 
                 $payload['slug'] = $this->uniqueSlug($payload['slug']);
                 $payload['stock_on_hand'] = null;
+                $payload['tracks_expiry'] = true;
+                $payload['expiry_type'] = 'none';
+                $payload['production_date'] = null;
+                $payload['expired_at'] = null;
+                $payload['expiry_snapshots'] = null;
 
                 $product = Product::create($payload);
                 $this->syncKeywords($product, $keywords);
@@ -108,6 +113,18 @@ class ProductService
     {
         $payload = $this->normalizePayload($data, $product->id);
         $payload['stock_on_hand'] = $this->refreshStockSnapshot($product->id) ?: null;
+        $expirySnapshots = $this->refreshExpirySnapshot($product->id);
+        $payload['expiry_snapshots'] = $expirySnapshots ?: null;
+
+        if (! empty($expirySnapshots)) {
+            $topSnapshot = $expirySnapshots[0];
+            $payload['tracks_expiry'] = true;
+            $payload['expired_at'] = $topSnapshot['resolved_expiry_at'] ?? $topSnapshot['expired_at'] ?? null;
+            $payload['production_date'] = $topSnapshot['production_date'] ?? null;
+            $payload['shelf_life_days'] = $topSnapshot['shelf_life_days'] ?? $payload['shelf_life_days'];
+            $payload['expiry_warning_days'] = $topSnapshot['expiry_warning_days'] ?? $payload['expiry_warning_days'];
+            $payload['expiry_grace_days'] = $topSnapshot['expiry_grace_days'] ?? $payload['expiry_grace_days'];
+        }
         $oldImagePath = $product->image;
         $storedImagePath = null;
 
@@ -152,14 +169,14 @@ class ProductService
         $this->deleteKeywords($product);
         $product->delete();
     }
-
-    public function restore(int $id): Product
+public function restore(int $id): Product
     {
         $product = Product::onlyTrashed()->findOrFail($id);
         $product->restore();
 
         $this->syncKeywords($product, $this->normalizeKeywords($product->search_keywords));
         $this->refreshStockSnapshot($product->id);
+        $this->refreshExpirySnapshot($product->id);
 
         return $product->refresh()->load(['category', 'unit', 'supplier', 'location']);
     }
@@ -205,6 +222,9 @@ class ProductService
             'expiry_warning_days' => $product->expiry_warning_days,
             'expiry_grace_days' => $product->expiry_grace_days,
             'resolved_expiry_at' => $product->resolved_expiry_at,
+            'expiry_snapshot_count' => $product->expiry_snapshot_count,
+            'expiry_snapshot_items' => $product->expiry_snapshot_items,
+            'expiry_snapshot_top' => $product->expiry_snapshot_top,
             'expiry_status' => $product->expiry_status,
             'expiry_status_label' => $product->expiry_status_label,
             'expiry_status_class' => $product->expiry_status_class,
@@ -276,6 +296,113 @@ class ProductService
         return $stockOnHand;
     }
 
+public function refreshExpirySnapshot(int $productId): array
+{
+    $batches = StockBatches::query()
+        ->with(['receiver'])
+        ->where('product_id', $productId)
+        ->whereNull('deleted_at')
+        ->where('qty_remaining', '>', 0)
+        ->orderByRaw("CASE WHEN expired_at IS NULL THEN 1 ELSE 0 END")
+        ->orderBy('expired_at')
+        ->orderBy('received_at')
+        ->orderBy('id')
+        ->get()
+        ->filter(function (StockBatches $batch): bool {
+            return $this->hasTrackedExpiryData($batch);
+        })
+        ->values();
+
+    $snapshots = $batches->map(function (StockBatches $batch): array {
+        $status = $batch->expiry_status;
+
+        return [
+            'batch_id' => $batch->id,
+            'batch_code' => $batch->batch_code,
+            'lot_number' => $batch->lot_number,
+            'qty_received' => (int) $batch->qty_received,
+            'qty_remaining' => (int) $batch->qty_remaining,
+            'production_date' => optional($batch->production_date)->format('Y-m-d'),
+            'expired_at' => optional($batch->expired_at)->format('Y-m-d'),
+            'resolved_expiry_at' => $batch->resolved_expiry_at,
+            'expiry_warning_days' => (int) data_get($batch->metadata, 'expiry_warning_days', 30),
+            'expiry_grace_days' => (int) data_get($batch->metadata, 'expiry_grace_days', 0),
+            'shelf_life_days' => data_get($batch->metadata, 'shelf_life_days'),
+            'expiry_mode' => data_get($batch->metadata, 'expiry_mode', 'none'),
+            'added_at' => optional($batch->received_at)->format('Y-m-d'),
+            'added_at_label' => optional($batch->received_at)->format('d M Y'),
+            'added_by_id' => $batch->received_by,
+            'added_by_name' => optional($batch->receiver)->name,
+            'expiry_days_left' => $batch->expiry_days_left,
+            'expiry_status' => $status,
+            'expiry_status_label' => $batch->expiry_status_label,
+            'expiry_status_class' => $batch->expiry_status_class,
+            'expiry_summary' => $batch->expiry_summary,
+            'priority_rank' => $this->expirySnapshotPriority($status),
+            'status' => $batch->status,
+            'status_label' => $batch->status_label,
+            'notes' => $batch->notes,
+            'source_label' => data_get($batch->metadata, 'source_label', 'Penerimaan batch'),
+        ];
+    })->sort(function (array $left, array $right): int {
+        $leftKey = [
+            (int) ($left['priority_rank'] ?? 99),
+            ($left['expiry_days_left'] ?? null) === null ? PHP_INT_MAX : (int) $left['expiry_days_left'],
+            ($left['added_at'] ?? null) !== null ? -(int) strtotime((string) $left['added_at']) : PHP_INT_MAX,
+            (int) ($left['batch_id'] ?? 0),
+        ];
+
+        $rightKey = [
+            (int) ($right['priority_rank'] ?? 99),
+            ($right['expiry_days_left'] ?? null) === null ? PHP_INT_MAX : (int) $right['expiry_days_left'],
+            ($right['added_at'] ?? null) !== null ? -(int) strtotime((string) $right['added_at']) : PHP_INT_MAX,
+            (int) ($right['batch_id'] ?? 0),
+        ];
+
+        return $leftKey <=> $rightKey;
+    })->values()->all();
+
+    $topSnapshot = $snapshots[0] ?? null;
+
+    Product::query()
+        ->whereKey($productId)
+        ->update([
+            'tracks_expiry' => true,
+            'expiry_snapshots' => $snapshots ?: null,
+            'expired_at' => $topSnapshot['resolved_expiry_at'] ?? $topSnapshot['expired_at'] ?? null,
+            'production_date' => $topSnapshot['production_date'] ?? null,
+            'shelf_life_days' => $topSnapshot['shelf_life_days'] ?? null,
+            'expiry_warning_days' => $topSnapshot['expiry_warning_days'] ?? 30,
+            'expiry_grace_days' => $topSnapshot['expiry_grace_days'] ?? 0,
+        ]);
+
+    return $snapshots;
+}
+
+
+protected function hasTrackedExpiryData(StockBatches $batch): bool
+{
+    if (filled($batch->production_date) || filled($batch->expired_at)) {
+        return true;
+    }
+
+    return data_get($batch->metadata, 'expiry_mode', 'none') !== 'none';
+}
+
+protected function expirySnapshotPriority(string $status): int
+{
+    return match ($status) {
+        'grace_period' => 0,
+        'expired' => 1,
+        'expires_today' => 2,
+        'expiring_soon' => 3,
+        'active' => 4,
+        'depleted' => 5,
+        'no_tracking' => 6,
+        default => 7,
+    };
+}
+
     protected function normalizePayload(array $data, ?int $ignoreId = null): array
     {
         $name = trim((string) ($data['name'] ?? ''));
@@ -329,8 +456,8 @@ class ProductService
             'sale_price' => $this->normalizeDecimal($data['sale_price'] ?? null),
             'min_stock' => $this->normalizeInteger($data['min_stock'] ?? null),
             'stock_on_hand' => $this->normalizeInteger($data['stock_on_hand'] ?? null),
-            'tracks_expiry' => $this->booleanValue($data['tracks_expiry'] ?? false),
-            'expiry_type' => $this->normalizeExpiryType($data['expiry_type'] ?? null, $this->booleanValue($data['tracks_expiry'] ?? false)),
+            'tracks_expiry' => $this->booleanValue($data['tracks_expiry'] ?? true),
+            'expiry_type' => $this->normalizeExpiryType($data['expiry_type'] ?? null, $this->booleanValue($data['tracks_expiry'] ?? true)),
             'production_date' => $this->normalizeDate($data['production_date'] ?? null),
             'expired_at' => $this->normalizeDate($data['expired_at'] ?? null),
             'shelf_life_days' => $this->normalizeInteger($data['shelf_life_days'] ?? null),
@@ -579,11 +706,11 @@ class ProductService
     {
         $type = strtolower(trim((string) $value));
 
-        if (!$tracksExpiry) {
+        if (! $tracksExpiry) {
             return 'none';
         }
 
-        return in_array($type, ['fixed_date', 'shelf_life'], true) ? $type : 'fixed_date';
+        return in_array($type, ['none', 'fixed_date', 'shelf_life'], true) ? $type : 'none';
     }
 
     protected function normalizeDecimal(mixed $value): ?float

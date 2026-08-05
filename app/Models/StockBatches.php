@@ -48,6 +48,7 @@ class StockBatches extends Model
         'expiry_status_label',
         'expiry_status_class',
         'expiry_summary',
+        'resolved_expiry_at',
         'status_label',
     ];
 
@@ -218,6 +219,13 @@ class StockBatches extends Model
         }
 
         return 'Sisa ' . $daysLeft . ' hari';
+    }
+
+    public function getResolvedExpiryAtAttribute(): ?string
+    {
+        $resolved = $this->resolveExpiryDate();
+
+        return $resolved?->format('Y-m-d');
     }
 
     public function getStatusLabelAttribute(): string
