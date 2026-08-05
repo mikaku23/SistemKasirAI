@@ -273,6 +273,8 @@ body.sidebar-collapsed .sidebar {
     overflow-y: auto;
     overflow-x: hidden;
     overscroll-behavior: contain;
+    scroll-behavior: auto;
+    scroll-padding-block: 16px;
     scrollbar-gutter: stable;
     scrollbar-width: thin;
     scrollbar-color: rgba(91, 140, 255, 0.58) rgba(255, 255, 255, 0.04);

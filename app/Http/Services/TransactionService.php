@@ -49,6 +49,38 @@ class TransactionService
         ];
     }
 
+
+    public function findProductByBarcode(string $barcode): ?array
+{
+    $normalized = $this->normalizeBarcodeLookup($barcode);
+
+    if ($normalized === '') {
+        return null;
+    }
+
+    $product = Product::query()
+        ->with(['unit', 'category', 'supplier', 'location'])
+        ->where('barcode', $normalized)
+        ->where('is_active', true)
+        ->first();
+
+    if (! $product) {
+        return null;
+    }
+
+    return [
+        'id' => $product->id,
+        'barcode' => $product->barcode,
+        'name' => $product->name,
+        'sale_price' => (int) $product->sale_price,
+        'effective_discount_amount' => (int) $product->effective_discount_amount,
+        'stock_on_hand' => (int) $product->stock_on_hand,
+        'unit_label' => optional($product->unit)->symbol ?? optional($product->unit)->name ?? '-',
+        'category_name' => optional($product->category)->name,
+        'image_url' => $product->image ? asset('storage/' . $product->image) : null,
+    ];
+}
+
     public function activeTransactions(): Collection
     {
         return Transaction::query()->with(['location', 'cashier', 'taxSetting', 'discountSetting', 'items.product', 'items.stockBatch', 'stockMovements.stockBatch'])->withCount('items')->orderByDesc('transaction_at')->get();
@@ -343,6 +375,14 @@ class TransactionService
             'transaction_at' => optional($transaction->transaction_at)->format('d M Y H:i'),
         ];
     }
+
+
+    protected function normalizeBarcodeLookup(string $barcode): string
+{
+    $barcode = preg_replace('/\D/', '', trim($barcode)) ?? '';
+
+    return $barcode === '' ? '' : $this->normalizeBarcode($barcode);
+}
 
     protected function normalizePayload(array $data): array
     {

@@ -6,6 +6,7 @@ use App\Http\Requests\TransactionStoreRequest;
 use App\Http\Services\TransactionService;
 use App\Models\Transaction;
 use Barryvdh\DomPDF\Facade\Pdf as PdfFacade;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
@@ -39,6 +40,22 @@ class TransactionController extends Controller
         return view('admin.transactions.show', [
             'menu' => 'transactions',
             'transaction' => $transaction->load(['location', 'cashier', 'taxSetting', 'discountSetting', 'items.product', 'items.stockBatch', 'stockMovements.stockBatch']),
+        ]);
+    }
+
+    public function lookupBarcode(string $barcode): JsonResponse
+    {
+        $product = $this->transactionService->findProductByBarcode($barcode);
+
+        if (! $product) {
+            return response()->json([
+                'message' => 'Barcode tidak ditemukan.',
+            ], 404);
+        }
+
+        return response()->json([
+            'message' => 'Barcode ditemukan.',
+            'data' => $product,
         ]);
     }
 

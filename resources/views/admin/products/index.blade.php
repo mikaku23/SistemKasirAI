@@ -189,6 +189,16 @@
                                         <i class="fa-solid fa-pen-to-square" aria-hidden="true"></i>
                                     </a>
 
+                                    <a
+                                        href="{{ route('products.print-barcode', $product->id) }}"
+                                        class="icon-btn"
+                                        aria-label="Print barcode"
+                                        title="Print barcode"
+                                        target="_blank"
+                                        rel="noopener">
+                                        <i class="fa-solid fa-barcode" aria-hidden="true"></i>
+                                    </a>
+
                                     <form
                                         action="{{ route('products.destroy', $product->id) }}"
                                         method="POST"

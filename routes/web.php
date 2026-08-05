@@ -58,6 +58,9 @@ Route::resource('units', UnitController::class);
 Route::get('products/recycle', [ProductController::class, 'recycle'])->name('products.recycle');
 Route::post('products/{product}/restore', [ProductController::class, 'restore'])->name('products.restore');
 Route::delete('products/{product}/force-delete', [ProductController::class, 'forceDelete'])->name('products.forceDelete');
+Route::get('products/{product}/print-barcode', [ProductController::class, 'printBarcode'])
+    ->whereNumber('product')
+    ->name('products.print-barcode');
 Route::resource('products', ProductController::class);
 
 // categories
@@ -81,6 +84,7 @@ Route::resource('stock-batches', StockBatchController::class)
     ->parameters(['stock-batches' => 'stock_batch']);
 
 Route::get('transactions/{transaction}/print', [TransactionController::class, 'print'])->whereNumber('transaction')->name('transactions.print');
+Route::get('transactions/barcode/{barcode}', [TransactionController::class, 'lookupBarcode'])->where('barcode', '[0-9]+')->name('transactions.barcode-lookup');
 Route::resource('transactions', TransactionController::class);
 
 

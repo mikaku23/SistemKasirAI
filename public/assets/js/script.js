@@ -411,6 +411,10 @@ const navItems = Array.from(document.querySelectorAll(".nav-item"));
     const productPageInfo =
         productPagination?.querySelector(".pagination__meta");
 
+    const sidebarNav = document.querySelector(".sidebar-nav");
+    const SIDEBAR_SCROLL_KEY = "glassAdminSidebarScrollTop";
+    let sidebarScrollSaveTimer = null;
+
     const perPage = {
         activity: 5,
         products: 5,
@@ -495,6 +499,70 @@ const navItems = Array.from(document.querySelectorAll(".nav-item"));
         state.sidebarCollapsed = collapsed;
         body.classList.toggle("sidebar-collapsed", collapsed);
         localStorage.setItem("glassAdminSidebarCollapsed", String(collapsed));
+    }
+
+    function saveSidebarScrollPosition() {
+        if (!sidebarNav) return;
+        localStorage.setItem(
+            SIDEBAR_SCROLL_KEY,
+            String(Math.max(0, Math.round(sidebarNav.scrollTop || 0))),
+        );
+    }
+
+    function restoreSidebarScrollPosition() {
+        if (!sidebarNav) return false;
+
+        const rawValue = localStorage.getItem(SIDEBAR_SCROLL_KEY);
+        if (rawValue === null) return false;
+
+        const value = Number(rawValue);
+        if (!Number.isFinite(value)) return false;
+
+        sidebarNav.scrollTop = Math.max(0, value);
+        return true;
+    }
+
+    function scrollSidebarActiveItemIntoView() {
+        if (!sidebarNav) return;
+
+        const activeItem = document.querySelector(".nav-item.active");
+        if (!activeItem) return;
+
+        activeItem.scrollIntoView({
+            block: "center",
+            inline: "nearest",
+            behavior: "auto",
+        });
+    }
+
+    function syncSidebarScroll({ restore = false } = {}) {
+        window.requestAnimationFrame(() => {
+            const restored = restore ? restoreSidebarScrollPosition() : false;
+
+            if (!restored) {
+                scrollSidebarActiveItemIntoView();
+            }
+        });
+    }
+
+    function bindSidebarScrollPersistence() {
+        if (!sidebarNav) return;
+
+        sidebarNav.addEventListener(
+            "scroll",
+            () => {
+                window.clearTimeout(sidebarScrollSaveTimer);
+                sidebarScrollSaveTimer = window.setTimeout(
+                    saveSidebarScrollPosition,
+                    120,
+                );
+            },
+            { passive: true },
+        );
+
+        window.addEventListener("beforeunload", saveSidebarScrollPosition, {
+            passive: true,
+        });
     }
 
     function updateActiveNav(view) {
@@ -915,7 +983,10 @@ const navItems = Array.from(document.querySelectorAll(".nav-item"));
        goViewButtons.forEach((button) => {
            button.addEventListener("click", () => {
                const view = button.dataset.go;
-               if (view) setView(view);
+               if (view) {
+                   setView(view);
+                   syncSidebarScroll();
+               }
            });
        });
    }
@@ -1116,6 +1187,9 @@ const navItems = Array.from(document.querySelectorAll(".nav-item"));
            const view = getActiveViewFromSidebar();
            setView(view);
        }
+
+       bindSidebarScrollPersistence();
+       syncSidebarScroll({ restore: true });
 
        renderSparklines();
        renderLineChart();
