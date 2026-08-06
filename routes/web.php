@@ -12,6 +12,7 @@ use App\Http\Controllers\StockAdjustmentController;
 use App\Http\Controllers\StockBatchController;
 use App\Http\Controllers\StockMovementController;
 use App\Http\Controllers\SupplierController;
+use App\Http\Controllers\SupplierReturnController;
 use App\Http\Controllers\TaxSettingController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\UnitController;
@@ -84,6 +85,16 @@ Route::delete('stock-batches/{stock_batch}/force-delete', [StockBatchController:
 
 Route::resource('stock-batches', StockBatchController::class)
     ->parameters(['stock-batches' => 'stock_batch']);
+
+Route::get('supplier-returns/recycle', [SupplierReturnController::class, 'recycle'])->name('supplier-returns.recycle');
+Route::post('supplier-returns/{supplier_return}/restore', [SupplierReturnController::class, 'restore'])
+    ->whereNumber('supplier_return')
+    ->name('supplier-returns.restore');
+Route::delete('supplier-returns/{supplier_return}/force-delete', [SupplierReturnController::class, 'forceDelete'])
+    ->whereNumber('supplier_return')
+    ->name('supplier-returns.forceDelete');
+Route::resource('supplier-returns', SupplierReturnController::class)
+    ->parameters(['supplier-returns' => 'supplier_return']);
 
 Route::get('stock-adjustments', [StockAdjustmentController::class, 'index'])->name('stock-adjustments.index');
 Route::get('stock-adjustments/create', [StockAdjustmentController::class, 'create'])->name('stock-adjustments.create');

@@ -283,7 +283,7 @@ public function restore(int $id): Product
         Storage::disk('public')->delete($path);
     }
 
-    protected function refreshStockSnapshot(int $productId): int
+    public function refreshStockSnapshot(int $productId): int
     {
         $stockOnHand = (int) StockBatches::query()
             ->where('product_id', $productId)

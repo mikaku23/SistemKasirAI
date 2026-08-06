@@ -99,7 +99,13 @@
                         <select name="product_id" required>
                             <option value="">Pilih product</option>
                             @foreach ($products as $product)
-                                <option value="{{ $product->id }}" data-location-id="{{ $product->location_id }}" {{ old('product_id') == $product->id ? 'selected' : '' }}>
+                                <option
+                                    value="{{ $product->id }}"
+                                    data-location-id="{{ $product->location_id }}"
+                                    data-location-name="{{ optional($product->location)->name }}"
+                                    data-supplier-id="{{ $product->supplier_id }}"
+                                    data-supplier-name="{{ optional($product->supplier)->name }}"
+                                    {{ old('product_id') == $product->id ? 'selected' : '' }}>
                                     {{ $product->name }}
                                     @if ($product->sku)
                                         ({{ $product->sku }})
@@ -111,26 +117,16 @@
 
                     <label class="form-field">
                         <span>Supplier</span>
-                        <select name="supplier_id">
-                            <option value="">-- Optional --</option>
-                            @foreach ($suppliers as $supplier)
-                                <option value="{{ $supplier->id }}" {{ old('supplier_id') == $supplier->id ? 'selected' : '' }}>
-                                    {{ $supplier->name }}
-                                </option>
-                            @endforeach
-                        </select>
+                        <input type="hidden" name="supplier_id" data-batch-supplier-hidden value="{{ old('supplier_id') }}">
+                        <input type="text" class="return-auto-field" data-batch-supplier-display value="{{ $selectedSupplier?->name ?: '-- Auto from product --' }}" disabled>
+                        <div class="return-field-note">Supplier dikunci mengikuti product yang dipilih.</div>
                     </label>
 
                     <label class="form-field">
                         <span>Location</span>
-                        <select name="location_id">
-                            <option value="">-- Optional --</option>
-                            @foreach ($locations as $location)
-                                <option value="{{ $location->id }}" {{ old('location_id') == $location->id ? 'selected' : '' }}>
-                                    {{ $location->name }}
-                                </option>
-                            @endforeach
-                        </select>
+                        <input type="hidden" name="location_id" data-batch-location-hidden value="{{ old('location_id') }}">
+                        <input type="text" class="return-auto-field" data-batch-location-display value="{{ $selectedLocation?->name ?: '-- Auto from product --' }}" disabled>
+                        <div class="return-field-note">Location juga mengikuti product agar data konsisten.</div>
                     </label>
 
                     <label class="form-field">
@@ -318,5 +314,38 @@
 
 @section('js')
 <script src="{{ asset('assets/js/layout.js') }}"></script>
-<script src="{{ asset('assets/js/location-product-filter.js') }}"></script>
+<script>
+    (function () {
+        const productSelect = document.querySelector('select[name="product_id"]');
+        const supplierHidden = document.querySelector('[data-batch-supplier-hidden]');
+        const supplierDisplay = document.querySelector('[data-batch-supplier-display]');
+        const locationHidden = document.querySelector('[data-batch-location-hidden]');
+        const locationDisplay = document.querySelector('[data-batch-location-display]');
+
+        if (!productSelect) {
+            return;
+        }
+
+        const syncFromProduct = () => {
+            const option = productSelect.options[productSelect.selectedIndex];
+
+            if (!option || !option.value) {
+                if (supplierHidden) supplierHidden.value = '';
+                if (locationHidden) locationHidden.value = '';
+                if (supplierDisplay) supplierDisplay.value = '-- Auto from product --';
+                if (locationDisplay) locationDisplay.value = '-- Auto from product --';
+                return;
+            }
+
+            if (supplierHidden) supplierHidden.value = option.dataset.supplierId || '';
+            if (locationHidden) locationHidden.value = option.dataset.locationId || '';
+            if (supplierDisplay) supplierDisplay.value = option.dataset.supplierName || '--';
+            if (locationDisplay) locationDisplay.value = option.dataset.locationName || '--';
+        };
+
+        productSelect.addEventListener('change', syncFromProduct);
+        productSelect.addEventListener('input', syncFromProduct);
+        syncFromProduct();
+    })();
+</script>
 @endsection

@@ -91,8 +91,8 @@ class StockBatchService
                 ->with(['supplier'])
                 ->findOrFail($payload['product_id']);
 
-            $payload['supplier_id'] = $payload['supplier_id'] ?? $product->supplier_id;
-            $payload['location_id'] = $payload['location_id'] ?? $product->location_id;
+            $payload['supplier_id'] = $product->supplier_id;
+            $payload['location_id'] = $product->location_id;
             $payload['qty_remaining'] = $payload['qty_remaining'] ?? $payload['qty_received'];
             $payload['batch_code'] = $this->temporaryCode('BCH');
             $payload['lot_number'] = $this->temporaryCode('LOT');
@@ -163,8 +163,8 @@ class StockBatchService
                 ->with(['supplier'])
                 ->findOrFail($payload['product_id']);
 
-            $payload['supplier_id'] = $payload['supplier_id'] ?? $product->supplier_id;
-            $payload['location_id'] = $payload['location_id'] ?? $product->location_id;
+            $payload['supplier_id'] = $product->supplier_id;
+            $payload['location_id'] = $product->location_id;
 
             // Qty received dan qty remaining adalah hasil proses barang masuk.
             // Saat edit batch, nilainya dipertahankan agar perubahan stok tetap lewat stock movement / adjustment.

@@ -75,6 +75,10 @@
       <a href="{{ route('transactions.index') }}" class="nav-item {{ $menu == 'transactions' ? 'active' : '' }}">
         <i class="icon fa-solid fa-receipt" aria-hidden="true"></i><span>Transactions</span>
       </a>
+
+      <a href="{{ route('supplier-returns.index') }}" class="nav-item {{ $menu == 'supplier-returns' ? 'active' : '' }}">
+        <i class="icon fa-solid fa-undo" aria-hidden="true"></i><span>Supplier Returns</span>
+      </a>
      
     </div>
 

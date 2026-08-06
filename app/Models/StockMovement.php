@@ -2,7 +2,11 @@
 
 namespace App\Models;
 
+use App\Models\Location;
+use App\Models\Product;
+use App\Models\StockBatches;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Foundation\Auth\User;
 
 class StockMovement extends Model
 {

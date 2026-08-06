@@ -3,9 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Returns extends Model
 {
+    use SoftDeletes;
+
     protected $table = 'returns';
 
     protected $fillable = [
@@ -51,6 +54,11 @@ class Returns extends Model
 
     public function items()
     {
-        return $this->hasMany(ReturnItem::class);
+        return $this->hasMany(ReturnItem::class, 'return_id');
     }
+
+   public function stockMovements()
+{
+    return $this->morphMany(StockMovement::class, 'reference');
+}
 }
