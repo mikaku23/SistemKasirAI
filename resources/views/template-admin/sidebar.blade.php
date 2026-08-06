@@ -83,6 +83,9 @@
       <a href="{{ route('stock-movements.index') }}" class="nav-item {{ $menu == 'stock-movements' ? 'active' : '' }}">
         <i class="icon fa-solid fa-exchange-alt" aria-hidden="true"></i><span>Stock Movements</span>
       </a>
+      <a href="{{ route('log-tc.index') }}" class="nav-item {{ $menu == 'log-tc' ? 'active' : '' }}">
+        <i class="icon fa-solid fa-file-invoice-dollar" aria-hidden="true"></i><span>Transaction Logs</span>
+      </a>
      
     </div>
 

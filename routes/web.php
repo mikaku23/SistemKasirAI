@@ -4,6 +4,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DiscountSettingController;
 use App\Http\Controllers\LocationController;
+use App\Http\Controllers\LogTcController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductPromoSettingController;
 use App\Http\Controllers\RoleController;
@@ -101,6 +102,10 @@ Route::get('transactions/{transaction}/print', [TransactionController::class, 'p
 Route::get('transactions/barcode/{barcode}', [TransactionController::class, 'lookupBarcode'])->where('barcode', '[0-9]+')->name('transactions.barcode-lookup');
 Route::resource('transactions', TransactionController::class);
 
+Route::get('log-tc', [LogTcController::class, 'index'])->name('log-tc.index');
+Route::get('log-tc/{transaction}', [LogTcController::class, 'show'])
+    ->whereNumber('transaction')
+    ->name('log-tc.show');
 
 Route::get('locations/recycle', [LocationController::class, 'recycle'])->name('locations.recycle');
 Route::post('locations/{location}/restore', [LocationController::class, 'restore'])

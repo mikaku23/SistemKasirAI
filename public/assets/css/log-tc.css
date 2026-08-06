@@ -1,0 +1,131 @@
+.log-tc-page .page-card__actions { align-items: flex-start; }
+
+.log-tc-page .log-tc-filter-card,
+.log-tc-page .log-tc-summary-card,
+.log-tc-page .log-tc-table-card { padding: 1rem; }
+
+.log-tc-page .log-tc-filter-card { display: grid; gap: 1rem; }
+
+.log-tc-page .log-tc-filter-card .wizard-form-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+.log-tc-page .log-tc-filter-actions { margin-top: 0; flex-wrap: wrap; }
+
+.log-tc-page .log-tc-filter-meta { display: flex; flex-wrap: wrap; gap: 0.65rem; align-items: center; }
+
+.log-tc-page .filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 38px;
+  padding: 0.55rem 0.8rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  color: inherit;
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.log-tc-page .filter-chip strong { font-weight: 700; }
+
+.log-tc-page .log-tc-summary-table-wrap,
+.log-tc-page .log-tc-detail-table-wrap { overflow: auto; border-radius: 1rem; }
+
+.log-tc-page .finance-summary-table,
+.log-tc-page .log-tc-detail-table {
+  width: 100%;
+  min-width: 0;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.log-tc-page .finance-summary-table--centered { table-layout: fixed; }
+
+.log-tc-page .finance-summary-table--centered th,
+.log-tc-page .finance-summary-table--centered td {
+  text-align: center;
+  vertical-align: middle;
+}
+
+.log-tc-page .finance-summary-table--centered thead th:nth-child(1),
+.log-tc-page .finance-summary-table--centered tbody td:nth-child(1) { width: 60%; }
+
+.log-tc-page .finance-summary-table--centered thead th:nth-child(2),
+.log-tc-page .finance-summary-table--centered tbody td:nth-child(2) { width: 40%; }
+
+.log-tc-page .finance-summary-table thead th,
+.log-tc-page .log-tc-detail-table thead th {
+  font-size: 0.8rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  opacity: 0.84;
+  padding: 1rem 0.95rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.log-tc-page .finance-summary-table tbody td,
+.log-tc-page .log-tc-detail-table tbody td {
+  padding: 0.95rem 0.95rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  vertical-align: middle;
+}
+
+.log-tc-page .finance-summary-table tbody tr:last-child td,
+.log-tc-page .log-tc-detail-table tbody tr:last-child td { border-bottom: 0; }
+
+.log-tc-page .finance-summary-table__label,
+.log-tc-page .log-tc-detail-table__label {
+  font-weight: 700;
+  white-space: normal;
+  line-height: 1.35;
+}
+
+.log-tc-page .finance-summary-table__value,
+.log-tc-page .log-tc-detail-table__value {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.log-tc-page .finance-summary-table__value.is-positive,
+.log-tc-page .log-tc-detail-table__value.is-positive { color: #8ef0bf; }
+
+.log-tc-page .finance-summary-table__value.is-negative,
+.log-tc-page .log-tc-detail-table__value.is-negative { color: #ff9a9a; }
+
+.log-tc-page .finance-summary-table__value.is-neutral,
+.log-tc-page .log-tc-detail-table__value.is-neutral { color: inherit; }
+
+.log-tc-page .section-note { opacity: 0.78; margin: 0; }
+
+.log-tc-page .batch-list { display: grid; gap: 0.35rem; }
+
+.log-tc-page .batch-list span {
+  display: inline-flex;
+  width: fit-content;
+  padding: 0.34rem 0.62rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 0.84rem;
+}
+
+.log-tc-page .batch-list small { opacity: 0.72; }
+
+@media (max-width: 1180px) {
+  .log-tc-page .log-tc-filter-card .wizard-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 720px) {
+  .log-tc-page .log-tc-filter-card .wizard-form-grid { grid-template-columns: 1fr; }
+
+  .log-tc-page .finance-summary-table thead th,
+  .log-tc-page .log-tc-detail-table thead th,
+  .log-tc-page .finance-summary-table tbody td,
+  .log-tc-page .log-tc-detail-table tbody td { padding: 0.8rem 0.75rem; }
+
+  .log-tc-page .finance-summary-table--centered thead th:nth-child(1),
+  .log-tc-page .finance-summary-table--centered tbody td:nth-child(1) { width: 58%; }
+
+  .log-tc-page .finance-summary-table--centered thead th:nth-child(2),
+  .log-tc-page .finance-summary-table--centered tbody td:nth-child(2) { width: 42%; }
+}
