@@ -17,6 +17,17 @@
         'cancelled' => 0,
         'refunded' => 0,
     ];
+
+    $transactionCollection = collect($transactions);
+
+    $transactionFinanceStats = [
+        'gross_subtotal' => (int) $transactionCollection->sum(fn ($transaction) => (int) data_get($transaction->metadata, 'financial_snapshot.gross_subtotal', $transaction->subtotal ?? 0)),
+        'net_revenue' => (int) $transactionCollection->sum(fn ($transaction) => (int) data_get($transaction->metadata, 'financial_snapshot.net_revenue_before_tax', max(0, (int) ($transaction->total_amount ?? 0) - (int) ($transaction->tax_amount ?? 0)))),
+        'cogs_total' => (int) $transactionCollection->sum(fn ($transaction) => (int) data_get($transaction->metadata, 'financial_snapshot.cogs_total', 0)),
+        'gross_profit' => (int) $transactionCollection->sum(fn ($transaction) => (int) data_get($transaction->metadata, 'financial_snapshot.gross_profit_before_tax', 0)),
+        'tax_total' => (int) $transactionCollection->sum(fn ($transaction) => (int) ($transaction->tax_amount ?? 0)),
+        'discount_total' => (int) $transactionCollection->sum(fn ($transaction) => (int) data_get($transaction->metadata, 'financial_snapshot.transaction_discount_amount', $transaction->discount_amount ?? 0)),
+    ];
 @endphp
 
 <section class="page-card glass-card transaction-page">
@@ -71,6 +82,33 @@
         <div class="stat-card glass-card">
             <span>Draft</span>
             <strong>{{ $transactionStats['draft'] }}</strong>
+        </div>
+    </div>
+
+    <div class="stats-grid" style="margin-top: 1rem;">
+        <div class="stat-card glass-card">
+            <span>Gross Subtotal</span>
+            <strong>Rp {{ number_format($transactionFinanceStats['gross_subtotal'], 0, ',', '.') }}</strong>
+        </div>
+        <div class="stat-card glass-card">
+            <span>Net Revenue</span>
+            <strong>Rp {{ number_format($transactionFinanceStats['net_revenue'], 0, ',', '.') }}</strong>
+        </div>
+        <div class="stat-card glass-card">
+            <span>COGS / Modal</span>
+            <strong>Rp {{ number_format($transactionFinanceStats['cogs_total'], 0, ',', '.') }}</strong>
+        </div>
+        <div class="stat-card glass-card">
+            <span>Gross Profit</span>
+            <strong>Rp {{ number_format($transactionFinanceStats['gross_profit'], 0, ',', '.') }}</strong>
+        </div>
+        <div class="stat-card glass-card">
+            <span>Tax Total</span>
+            <strong>Rp {{ number_format($transactionFinanceStats['tax_total'], 0, ',', '.') }}</strong>
+        </div>
+        <div class="stat-card glass-card">
+            <span>Discount Total</span>
+            <strong>Rp {{ number_format($transactionFinanceStats['discount_total'], 0, ',', '.') }}</strong>
         </div>
     </div>
 
@@ -192,8 +230,4 @@
         </div>
     </div>
 </section>
-@endsection
-
-@section('js')
-<script src="{{ asset('assets/js/layout.js') }}"></script>
 @endsection

@@ -127,7 +127,7 @@
             </label>
 
             <label class="form-field">
-                <span>Purchase Price</span>
+                <span>Total Modal / Purchase Price</span>
                 <input type="text" value="{{ $product->purchase_price !== null ? 'Rp ' . number_format((float) $product->purchase_price, 0, ',', '.') : '-' }}" disabled>
             </label>
 

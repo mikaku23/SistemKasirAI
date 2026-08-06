@@ -4,7 +4,6 @@
 
 @section('css')
 <link rel="stylesheet" href="{{ asset('assets/css/layout.css') }}">
-
 @endsection
 
 @section('content')
@@ -19,6 +18,17 @@
         'qty_received' => 0,
         'qty_remaining' => 0,
         'trashed' => 0,
+    ];
+
+    $batchCollection = collect($stockBatches);
+
+    $stockFinanceStats = [
+        'purchase_total' => (int) $batchCollection->sum(fn ($batch) => (int) data_get($batch->metadata, 'financial_snapshot.purchase_total', (int) round(((float) ($batch->purchase_price ?? 0)) * (int) ($batch->qty_received ?? 0)))),
+        'expected_revenue_total' => (int) $batchCollection->sum(fn ($batch) => (int) data_get($batch->metadata, 'financial_snapshot.expected_revenue_total', (int) round(((float) optional($batch->product)->sale_price) * (int) ($batch->qty_received ?? 0)))),
+        'expected_profit_total' => (int) $batchCollection->sum(fn ($batch) => (int) data_get($batch->metadata, 'financial_snapshot.expected_profit_total', 0)),
+        'sold_revenue_total' => (int) $batchCollection->sum(fn ($batch) => (int) data_get($batch->metadata, 'financial_snapshot.sold_revenue_total', 0)),
+        'sold_cogs_total' => (int) $batchCollection->sum(fn ($batch) => (int) data_get($batch->metadata, 'financial_snapshot.sold_cogs_total', 0)),
+        'realized_profit_total' => (int) $batchCollection->sum(fn ($batch) => (int) data_get($batch->metadata, 'financial_snapshot.realized_profit_total', 0)),
     ];
 
     $formatQty = function ($value) {
@@ -38,7 +48,7 @@
         <div class="page-card__title">
             <p class="eyebrow">STOCK BATCHES</p>
             <h2>Barang Masuk</h2>
-            <p>Mencatat penerimaan stok per batch/lot, lengkap dengan expiry, sisa stok, dan log mutasi.</p>
+            <p>Mencatat penerimaan stok per batch/lot, lengkap dengan expiry, sisa stok, modal, dan laba.</p>
         </div>
 
         <div class="page-card__actions">
@@ -101,6 +111,33 @@
         <div class="stat-card glass-card">
             <span>Qty Remaining</span>
             <strong>{{ $stockBatchStats['qty_remaining'] }}</strong>
+        </div>
+    </div>
+
+    <div class="stats-grid" style="margin-top: 1rem;">
+        <div class="stat-card glass-card">
+            <span>Total Modal</span>
+            <strong>Rp {{ number_format($stockFinanceStats['purchase_total'], 0, ',', '.') }}</strong>
+        </div>
+        <div class="stat-card glass-card">
+            <span>Expected Revenue</span>
+            <strong>Rp {{ number_format($stockFinanceStats['expected_revenue_total'], 0, ',', '.') }}</strong>
+        </div>
+        <div class="stat-card glass-card">
+            <span>Expected Profit</span>
+            <strong>Rp {{ number_format($stockFinanceStats['expected_profit_total'], 0, ',', '.') }}</strong>
+        </div>
+        <div class="stat-card glass-card">
+            <span>Sold Revenue</span>
+            <strong>Rp {{ number_format($stockFinanceStats['sold_revenue_total'], 0, ',', '.') }}</strong>
+        </div>
+        <div class="stat-card glass-card">
+            <span>Sold COGS</span>
+            <strong>Rp {{ number_format($stockFinanceStats['sold_cogs_total'], 0, ',', '.') }}</strong>
+        </div>
+        <div class="stat-card glass-card">
+            <span>Realized Profit</span>
+            <strong>Rp {{ number_format($stockFinanceStats['realized_profit_total'], 0, ',', '.') }}</strong>
         </div>
     </div>
 

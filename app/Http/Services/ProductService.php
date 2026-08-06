@@ -97,6 +97,7 @@ class ProductService
 
                 $product = Product::create($payload);
                 $this->syncKeywords($product, $keywords);
+                $this->refreshFinancialSnapshot($product->id);
 
                 return $product->refresh()->load(['category', 'unit', 'supplier', 'location']);
             });
@@ -146,6 +147,7 @@ class ProductService
                 $product->save();
 
                 $this->syncKeywords($product, $keywords);
+                $this->refreshFinancialSnapshot($product->id);
 
                 return $product->refresh()->load(['category', 'unit', 'supplier', 'location']);
             });
@@ -177,6 +179,7 @@ public function restore(int $id): Product
         $this->syncKeywords($product, $this->normalizeKeywords($product->search_keywords));
         $this->refreshStockSnapshot($product->id);
         $this->refreshExpirySnapshot($product->id);
+        $this->refreshFinancialSnapshot($product->id);
 
         return $product->refresh()->load(['category', 'unit', 'supplier', 'location']);
     }
@@ -293,7 +296,59 @@ public function restore(int $id): Product
                 'stock_on_hand' => $stockOnHand > 0 ? $stockOnHand : null,
             ]);
 
+        $this->refreshFinancialSnapshot($productId);
+
         return $stockOnHand;
+    }
+
+    public function refreshFinancialSnapshot(int $productId): array
+    {
+        $product = Product::query()->find($productId);
+
+        if (! $product) {
+            return [];
+        }
+
+        $batches = StockBatches::query()
+            ->where('product_id', $productId)
+            ->whereNull('deleted_at')
+            ->get();
+
+        $purchaseTotal = (int) $batches->sum(function (StockBatches $batch): int {
+            return (int) round(((float) $batch->purchase_price) * max(0, (int) $batch->qty_received));
+        });
+
+        $stockOnHand = (int) $batches->sum('qty_remaining');
+        $salePrice = (int) $product->sale_price;
+        $expectedRevenueTotal = (int) $batches->sum(function (StockBatches $batch) use ($salePrice): int {
+            return (int) round(((float) $salePrice) * max(0, (int) $batch->qty_received));
+        });
+
+        $expectedProfitTotal = $expectedRevenueTotal - $purchaseTotal;
+        $realizedRevenueTotal = (int) $batches->sum(function (StockBatches $batch): int {
+            return (int) data_get($batch->metadata, 'financial_snapshot.sold_revenue_total', 0);
+        });
+        $realizedCogsTotal = (int) $batches->sum(function (StockBatches $batch): int {
+            return (int) data_get($batch->metadata, 'financial_snapshot.sold_cogs_total', 0);
+        });
+        $realizedProfitTotal = $realizedRevenueTotal - $realizedCogsTotal;
+
+        Product::query()
+            ->whereKey($productId)
+            ->update([
+                'purchase_price' => $purchaseTotal,
+                'stock_on_hand' => $stockOnHand > 0 ? $stockOnHand : null,
+            ]);
+
+        return [
+            'purchase_total' => $purchaseTotal,
+            'stock_on_hand' => $stockOnHand,
+            'expected_revenue_total' => $expectedRevenueTotal,
+            'expected_profit_total' => $expectedProfitTotal,
+            'realized_revenue_total' => $realizedRevenueTotal,
+            'realized_cogs_total' => $realizedCogsTotal,
+            'realized_profit_total' => $realizedProfitTotal,
+        ];
     }
 
 public function refreshExpirySnapshot(int $productId): array

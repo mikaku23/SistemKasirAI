@@ -10,6 +10,15 @@
 @php
     $stockBatch = $stockBatch ?? null;
     $metadata = is_array($stockBatch->metadata ?? null) ? $stockBatch->metadata : [];
+    $financialSnapshot = is_array(data_get($metadata, 'financial_snapshot')) ? data_get($metadata, 'financial_snapshot') : [];
+
+    $purchaseTotal = (int) data_get($financialSnapshot, 'purchase_total', (int) round(((float) ($stockBatch->purchase_price ?? 0)) * (int) ($stockBatch->qty_received ?? 0)));
+    $expectedRevenueTotal = (int) data_get($financialSnapshot, 'expected_revenue_total', (int) round(((float) optional($stockBatch->product)->sale_price) * (int) ($stockBatch->qty_received ?? 0)));
+    $expectedProfitTotal = (int) data_get($financialSnapshot, 'expected_profit_total', $expectedRevenueTotal - $purchaseTotal);
+    $soldQtyTotal = (int) data_get($financialSnapshot, 'sold_qty_total', 0);
+    $soldRevenueTotal = (int) data_get($financialSnapshot, 'sold_revenue_total', 0);
+    $soldCogsTotal = (int) data_get($financialSnapshot, 'sold_cogs_total', 0);
+    $realizedProfitTotal = (int) data_get($financialSnapshot, 'realized_profit_total', $soldRevenueTotal - $soldCogsTotal);
 
     $formatQty = function ($value) {
         if ($value === null || $value === '') {
@@ -28,7 +37,7 @@
         <div class="page-card__title">
             <p class="eyebrow">STOCK BATCHES</p>
             <h2>Detail Batch Stok</h2>
-            <p>Seluruh data ditampilkan dalam mode baca saja.</p>
+            <p>Seluruh data ditampilkan dalam mode baca saja, termasuk snapshot modal, omzet, dan laba batch.</p>
         </div>
 
         <div class="page-card__actions">
@@ -65,6 +74,52 @@
         <div class="stat-card glass-card">
             <span>Ditambahkan Pada</span>
             <strong>{{ $stockBatch->received_at ? $stockBatch->received_at->format('d M Y') : '-' }}</strong>
+        </div>
+    </div>
+
+    <div class="stats-grid" style="margin-bottom: 1rem;">
+        <div class="stat-card glass-card">
+            <span>Total Modal</span>
+            <strong>Rp {{ number_format($purchaseTotal, 0, ',', '.') }}</strong>
+        </div>
+        <div class="stat-card glass-card">
+            <span>Expected Revenue</span>
+            <strong>Rp {{ number_format($expectedRevenueTotal, 0, ',', '.') }}</strong>
+        </div>
+        <div class="stat-card glass-card">
+            <span>Expected Profit</span>
+            <strong>Rp {{ number_format($expectedProfitTotal, 0, ',', '.') }}</strong>
+        </div>
+        <div class="stat-card glass-card">
+            <span>Sold Revenue</span>
+            <strong>Rp {{ number_format($soldRevenueTotal, 0, ',', '.') }}</strong>
+        </div>
+        <div class="stat-card glass-card">
+            <span>Sold COGS</span>
+            <strong>Rp {{ number_format($soldCogsTotal, 0, ',', '.') }}</strong>
+        </div>
+        <div class="stat-card glass-card">
+            <span>Realized Profit</span>
+            <strong>Rp {{ number_format($realizedProfitTotal, 0, ',', '.') }}</strong>
+        </div>
+    </div>
+
+    <div class="stats-grid" style="margin-bottom: 1rem;">
+        <div class="stat-card glass-card">
+            <span>Revenue Gap</span>
+            <strong>Rp {{ number_format(max(0, $expectedRevenueTotal - $soldRevenueTotal), 0, ',', '.') }}</strong>
+        </div>
+        <div class="stat-card glass-card">
+            <span>Profit Gap</span>
+            <strong>Rp {{ number_format($expectedProfitTotal - $realizedProfitTotal, 0, ',', '.') }}</strong>
+        </div>
+        <div class="stat-card glass-card">
+            <span>Sell Through</span>
+            <strong>{{ (int) $stockBatch->qty_received > 0 ? number_format((($soldQtyTotal / max(1, (int) $stockBatch->qty_received)) * 100), 2, ',', '.') : '0,00' }}%</strong>
+        </div>
+        <div class="stat-card glass-card">
+            <span>Realized Status</span>
+            <strong>{{ $realizedProfitTotal >= 0 ? 'Profit' : 'Loss' }}</strong>
         </div>
     </div>
 

@@ -290,7 +290,8 @@
 
                     <label class="form-field">
                         <span>Purchase Price</span>
-                        <input type="number" name="purchase_price" value="{{ old('purchase_price', $product->purchase_price) }}" min="0" step="1" placeholder="0">
+                        <input type="text" value="Rp {{ number_format((int) $product->purchase_price, 0, ',', '.') }}" disabled>
+                        <small class="text-muted">Nilai ini disinkronkan otomatis dari total modal semua batches.</small>
                     </label>
 
                     <label class="form-field">
@@ -455,7 +456,7 @@
                     </div>
                     <div class="review-item">
                         <span>Purchase Price</span>
-                        <strong>{{ old('purchase_price', $product->purchase_price) !== null && old('purchase_price', $product->purchase_price) !== '' ? old('purchase_price', $product->purchase_price) : '-' }}</strong>
+                        <strong>Auto from batches</strong>
                     </div>
                     <div class="review-item">
                         <span>Sale Price</span>

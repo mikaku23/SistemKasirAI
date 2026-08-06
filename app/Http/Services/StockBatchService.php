@@ -99,6 +99,33 @@ class StockBatchService
 
             [$resolvedExpiredAt, $metadata, $status] = $this->resolveSmartExpiry($product, $payload);
 
+            $qtyReceived = (int) $payload['qty_received'];
+            $purchasePrice = (int) ($payload['purchase_price'] ?? 0);
+            $salePrice = (int) $product->sale_price;
+
+            $metadata['financial_snapshot'] = array_merge(is_array(data_get($metadata, 'financial_snapshot')) ? data_get($metadata, 'financial_snapshot') : [], [
+                'batch_id' => null,
+                'batch_code' => null,
+                'lot_number' => null,
+                'qty_received_total' => $qtyReceived,
+                'qty_remaining_total' => (int) ($payload['qty_remaining'] ?? $qtyReceived),
+                'purchase_price' => $purchasePrice,
+                'purchase_total' => $qtyReceived * $purchasePrice,
+                'expected_sale_price' => $salePrice,
+                'expected_revenue_total' => $qtyReceived * $salePrice,
+                'expected_profit_per_item' => $salePrice - $purchasePrice,
+                'expected_profit_total' => ($salePrice - $purchasePrice) * $qtyReceived,
+                'sold_qty_total' => 0,
+                'sold_revenue_total' => 0,
+                'sold_cogs_total' => 0,
+                'realized_profit_total' => 0,
+                'realized_profit_status' => 'break_even',
+                'sell_through_percent' => 0,
+                'revenue_gap_total' => $qtyReceived * $salePrice,
+                'profit_gap_total' => ($salePrice - $purchasePrice) * $qtyReceived,
+                'last_sale_at' => null,
+            ]);
+
             $payload['expired_at'] = $resolvedExpiredAt;
             $payload['metadata'] = $metadata;
             $payload['status'] = $status;
@@ -244,6 +271,7 @@ class StockBatchService
             'qty_received' => (int) $stockBatch->qty_received,
             'qty_remaining' => (int) $stockBatch->qty_remaining,
             'purchase_price' => (int) $stockBatch->purchase_price,
+            'financial_snapshot' => data_get($stockBatch->metadata, 'financial_snapshot', []),
             'production_date' => optional($stockBatch->production_date)->format('Y-m-d'),
             'expired_at' => optional($stockBatch->expired_at)->format('Y-m-d'),
             'received_at' => optional($stockBatch->received_at)->format('Y-m-d'),
@@ -413,6 +441,7 @@ class StockBatchService
             ]);
 
         app(ProductService::class)->refreshExpirySnapshot($productId);
+        app(ProductService::class)->refreshFinancialSnapshot($productId);
     }
 
     protected function buildBatchCode(StockBatches $batch): string

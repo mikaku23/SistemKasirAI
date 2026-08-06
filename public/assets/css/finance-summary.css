@@ -1,0 +1,89 @@
+
+/* Finance summary table for batch / transaction stats */
+.finance-summary-card {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.finance-summary-card__head h3 {
+  margin: 0;
+}
+
+.finance-summary-card__head p {
+  margin: 0.25rem 0 0;
+  opacity: 0.78;
+}
+
+.finance-summary-table-wrap {
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(12, 18, 36, 0.55);
+}
+
+.finance-summary-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 100%;
+}
+
+.finance-summary-table thead th {
+  text-align: left;
+  padding: 0.95rem 1rem;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.82;
+  background: rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.finance-summary-table tbody td {
+  padding: 0.95rem 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  vertical-align: middle;
+}
+
+.finance-summary-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.finance-summary-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.finance-summary-table__label {
+  font-weight: 700;
+  color: inherit;
+}
+
+.finance-summary-table__value {
+  text-align: right;
+  white-space: nowrap;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.finance-summary-table__value.is-positive {
+  color: #7ee2a8;
+}
+
+.finance-summary-table__value.is-negative {
+  color: #ff8f9f;
+}
+
+.finance-summary-table__value.is-neutral {
+  color: inherit;
+}
+
+@media (max-width: 640px) {
+  .finance-summary-card {
+    padding: 0.85rem;
+  }
+
+  .finance-summary-table thead th,
+  .finance-summary-table tbody td {
+    padding: 0.8rem 0.85rem;
+  }
+}

@@ -158,6 +158,7 @@ class TransactionService
         $taxBase = max(0, $subtotalAfterItemDiscount - $transactionDiscountAmount);
         $taxAmount = $this->calculateTaxAmount($taxSetting, $taxBase);
         $totalAmount = max(0, $taxBase + $taxAmount);
+        $netRevenueBeforeTax = max(0, $subtotalAfterItemDiscount - $transactionDiscountAmount);
 
         $paidAmount = $payload['payment_method'] === 'cash' ? max(0, (int) $payload['paid_amount']) : $totalAmount;
         if ($payload['payment_method'] === 'cash' && $paidAmount < $totalAmount) {
@@ -168,7 +169,7 @@ class TransactionService
         $status = 'paid';
         $changeAmount = max(0, $paidAmount - $totalAmount);
 
-        return DB::transaction(function () use ($payload, $items, $products, $lineSummaries, $taxSetting, $discountSetting, $grossSubtotal, $itemDiscountTotal, $subtotalAfterItemDiscount, $transactionDiscountAmount, $taxBase, $taxAmount, $totalAmount, $paidAmount, $status, $changeAmount, $transactionAt, $user) {
+        return DB::transaction(function () use ($payload, $items, $products, $lineSummaries, $taxSetting, $discountSetting, $grossSubtotal, $itemDiscountTotal, $subtotalAfterItemDiscount, $transactionDiscountAmount, $taxBase, $taxAmount, $totalAmount, $netRevenueBeforeTax, $paidAmount, $status, $changeAmount, $transactionAt, $user) {
             $transaction = Transaction::create([
                 'transaction_code' => $this->temporaryCode(),
                 'location_id' => $payload['location_id'],
@@ -215,6 +216,12 @@ class TransactionService
 
             $persistedItems = [];
             $transactionBatchAllocations = [];
+            $totalCogs = 0;
+            $totalAllocatedRevenue = 0;
+            $batchFinancialUpdates = [];
+
+            $remainingRevenuePool = $netRevenueBeforeTax;
+            $remainingBasePool = $subtotalAfterItemDiscount;
 
             foreach ($items as $row) {
                 $product = $products->get($row['product_id']);
@@ -230,6 +237,14 @@ class TransactionService
                 $lineGross = $unitPrice * $qty;
                 $lineItemDiscount = min($lineGross, $promoPerUnit * $qty);
                 $lineNet = max(0, $lineGross - $lineItemDiscount);
+                $itemRevenueAfterTxDiscount = $remainingBasePool > 0
+                    ? (int) round(($remainingRevenuePool * $lineNet) / max(1, $remainingBasePool))
+                    : $lineNet;
+                $remainingRevenuePool = max(0, $remainingRevenuePool - $itemRevenueAfterTxDiscount);
+                $remainingBasePool = max(0, $remainingBasePool - $lineNet);
+
+                $remainingBatchRevenuePool = $itemRevenueAfterTxDiscount;
+                $remainingBatchQtyPool = $qty;
 
                 foreach ($allocations['items'] as $allocatedBatch) {
                     $batch = $allocatedBatch['batch'];
@@ -237,10 +252,60 @@ class TransactionService
                     $newRemaining = max(0, (int) $batch->qty_remaining - $takeQty);
                     if ($firstBatchId === null) $firstBatchId = $batch->id;
 
+                    $batchCost = (int) round(((float) $batch->purchase_price) * $takeQty);
+                    $batchRevenueShare = $remainingBatchQtyPool > 0
+                        ? (($remainingBatchQtyPool <= $takeQty) ? $remainingBatchRevenuePool : (int) round(($remainingBatchRevenuePool * $takeQty) / max(1, $remainingBatchQtyPool)))
+                        : 0;
+                    $remainingBatchRevenuePool = max(0, $remainingBatchRevenuePool - $batchRevenueShare);
+                    $remainingBatchQtyPool = max(0, $remainingBatchQtyPool - $takeQty);
+
+                    $batchProfit = $batchRevenueShare - $batchCost;
+                    $totalCogs += $batchCost;
+                    $totalAllocatedRevenue += $batchRevenueShare;
+
                     $batch->forceFill([
                         'qty_remaining' => $newRemaining,
                         'status' => $newRemaining <= 0 ? 'finished' : ($batch->expiry_status === 'expiring_soon' || $batch->expiry_status === 'expires_today' ? 'near_expired' : 'active'),
                     ])->save();
+
+                    $batchMetadata = is_array($batch->metadata) ? $batch->metadata : [];
+                    $financialSnapshot = is_array(data_get($batchMetadata, 'financial_snapshot')) ? data_get($batchMetadata, 'financial_snapshot') : [];
+                    $soldQtyTotal = (int) data_get($financialSnapshot, 'sold_qty_total', 0) + $takeQty;
+                    $soldRevenueTotal = (int) data_get($financialSnapshot, 'sold_revenue_total', 0) + $batchRevenueShare;
+                    $soldCogsTotal = (int) data_get($financialSnapshot, 'sold_cogs_total', 0) + $batchCost;
+                    $realizedProfitTotal = $soldRevenueTotal - $soldCogsTotal;
+                    $qtyReceivedTotal = (int) $batch->qty_received;
+                    $purchaseTotal = (int) round(((float) $batch->purchase_price) * $qtyReceivedTotal);
+                    $expectedRevenueTotal = (int) round(((float) $product->sale_price) * $qtyReceivedTotal);
+                    $expectedProfitPerItem = (int) round((float) $product->sale_price - (float) $batch->purchase_price);
+                    $expectedProfitTotal = (int) round($expectedProfitPerItem * $qtyReceivedTotal);
+
+                    $financialSnapshot = array_merge($financialSnapshot, [
+                        'batch_id' => $batch->id,
+                        'batch_code' => $batch->batch_code,
+                        'lot_number' => $batch->lot_number,
+                        'qty_received_total' => $qtyReceivedTotal,
+                        'qty_remaining_total' => $newRemaining,
+                        'purchase_price' => (int) round((float) $batch->purchase_price),
+                        'purchase_total' => $purchaseTotal,
+                        'expected_sale_price' => (int) round((float) $product->sale_price),
+                        'expected_revenue_total' => $expectedRevenueTotal,
+                        'expected_profit_per_item' => $expectedProfitPerItem,
+                        'expected_profit_total' => $expectedProfitTotal,
+                        'sold_qty_total' => $soldQtyTotal,
+                        'sold_revenue_total' => $soldRevenueTotal,
+                        'sold_cogs_total' => $soldCogsTotal,
+                        'realized_profit_total' => $realizedProfitTotal,
+                        'realized_profit_status' => $realizedProfitTotal >= 0 ? 'profit' : 'loss',
+                        'sell_through_percent' => $qtyReceivedTotal > 0 ? round(($soldQtyTotal / $qtyReceivedTotal) * 100, 2) : 0,
+                        'revenue_gap_total' => max(0, $expectedRevenueTotal - $soldRevenueTotal),
+                        'profit_gap_total' => $expectedProfitTotal - $realizedProfitTotal,
+                        'last_sale_at' => $transactionAt->format('Y-m-d H:i:s'),
+                    ]);
+
+                    $batchMetadata['financial_snapshot'] = $financialSnapshot;
+
+                    $batch->forceFill(['metadata' => $batchMetadata])->saveQuietly();
 
                     StockMovement::create([
                         'product_id' => $product->id,
@@ -262,6 +327,10 @@ class TransactionService
                             'promo_discount_per_unit' => $promoPerUnit,
                             'line_item_discount' => $lineItemDiscount,
                             'line_subtotal' => $lineNet,
+                            'allocated_revenue' => $batchRevenueShare,
+                            'cogs_amount' => $batchCost,
+                            'allocated_profit' => $batchProfit,
+                            'batch_financial_snapshot' => $financialSnapshot,
                             'status' => $status,
                         ],
                     ]);
@@ -271,8 +340,13 @@ class TransactionService
                         'batch_code' => $batch->batch_code,
                         'lot_number' => $batch->lot_number,
                         'quantity' => $takeQty,
+                        'purchase_price' => (int) round((float) $batch->purchase_price),
+                        'cogs_amount' => $batchCost,
+                        'allocated_revenue' => $batchRevenueShare,
+                        'allocated_profit' => $batchProfit,
                         'expired_at' => optional($batch->expired_at)->format('Y-m-d'),
                     ];
+                    $batchFinancialUpdates[$batch->id] = $financialSnapshot;
                 }
 
                 TransactionItem::create([
@@ -294,12 +368,15 @@ class TransactionService
                     'promo_discount_per_unit' => $promoPerUnit,
                     'line_item_discount' => $lineItemDiscount,
                     'line_subtotal' => $lineNet,
+                    'line_subtotal_after_transaction_discount' => $itemRevenueAfterTxDiscount,
                     'batch_allocations' => $batchAllocations,
                 ];
                 $transactionBatchAllocations[] = [
                     'product_id' => $product->id,
                     'product_name' => $product->name,
                     'quantity' => $qty,
+                    'line_subtotal' => $lineNet,
+                    'line_subtotal_after_transaction_discount' => $itemRevenueAfterTxDiscount,
                     'batch_allocations' => $batchAllocations,
                 ];
             }
@@ -307,6 +384,24 @@ class TransactionService
             foreach ($products->keys() as $productId) {
                 $this->syncProductStockSnapshot((int) $productId);
             }
+
+            $transactionGrossProfit = $netRevenueBeforeTax - $totalCogs;
+            $transactionFinancialSnapshot = [
+                'gross_subtotal' => $grossSubtotal,
+                'item_discount_total' => $itemDiscountTotal,
+                'subtotal_after_item_discount' => $subtotalAfterItemDiscount,
+                'transaction_discount_amount' => $transactionDiscountAmount,
+                'net_revenue_before_tax' => $netRevenueBeforeTax,
+                'tax_amount' => $taxAmount,
+                'total_amount' => $totalAmount,
+                'cogs_total' => $totalCogs,
+                'gross_profit_before_tax' => $transactionGrossProfit,
+                'profit_status' => $transactionGrossProfit >= 0 ? 'profit' : 'loss',
+                'profit_margin_percent' => $netRevenueBeforeTax > 0 ? round(($transactionGrossProfit / $netRevenueBeforeTax) * 100, 2) : 0,
+                'allocated_revenue_total' => $totalAllocatedRevenue,
+                'rounding_adjustment' => $netRevenueBeforeTax - $totalAllocatedRevenue,
+                'revenue_gap_total' => max(0, $grossSubtotal - $netRevenueBeforeTax),
+            ];
 
             $transaction->forceFill([
                 'transaction_code' => $this->generateTransactionCode($transaction->refresh()),
@@ -331,6 +426,7 @@ class TransactionService
                         'discount_value' => $discountSetting->discount_value,
                         'minimum_total_amount' => $discountSetting->minimum_total_amount,
                     ] : null,
+                    'financial_snapshot' => $transactionFinancialSnapshot,
                     'source' => 'pos',
                 ]),
             ])->saveQuietly();
@@ -372,6 +468,7 @@ class TransactionService
             'status_class' => $transaction->status_class,
             'shift_label' => $transaction->shift_label,
             'payment_method_label' => $transaction->payment_method_label,
+            'financial_snapshot' => data_get($transaction->metadata, 'financial_snapshot', []),
             'transaction_at' => optional($transaction->transaction_at)->format('d M Y H:i'),
         ];
     }
@@ -510,6 +607,7 @@ class TransactionService
     {
         $stock = (int) StockBatches::query()->where('product_id', $productId)->where('qty_remaining', '>', 0)->sum('qty_remaining');
         Product::query()->whereKey($productId)->update(['stock_on_hand' => $stock]);
+        app(ProductService::class)->refreshFinancialSnapshot($productId);
     }
 
     protected function generateTransactionCode(Transaction $transaction): string

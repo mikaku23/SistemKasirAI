@@ -308,4 +308,5 @@
 
 @section('js')
 <script src="{{ asset('assets/js/layout.js') }}"></script>
+<script src="{{ asset('assets/js/location-product-filter.js') }}"></script>
 @endsection

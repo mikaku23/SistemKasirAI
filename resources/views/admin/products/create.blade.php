@@ -274,7 +274,8 @@
 
                     <label class="form-field">
                         <span>Purchase Price</span>
-                        <input type="number" name="purchase_price" value="{{ old('purchase_price') }}" min="0" step="1" placeholder="0">
+                        <input type="text" value="Auto from batches" disabled>
+                        <small class="text-muted">Nilai modal product akan dihitung otomatis dari total semua batches.</small>
                     </label>
 
                     <label class="form-field">
@@ -436,7 +437,7 @@
                     </div>
                     <div class="review-item">
                         <span>Purchase Price</span>
-                        <strong>{{ old('purchase_price') !== null && old('purchase_price') !== '' ? old('purchase_price') : '-' }}</strong>
+                        <strong>Auto from batches</strong>
                     </div>
                     <div class="review-item">
                         <span>Sale Price</span>

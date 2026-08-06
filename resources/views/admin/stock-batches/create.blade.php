@@ -99,7 +99,7 @@
                         <select name="product_id" required>
                             <option value="">Pilih product</option>
                             @foreach ($products as $product)
-                                <option value="{{ $product->id }}" {{ old('product_id') == $product->id ? 'selected' : '' }}>
+                                <option value="{{ $product->id }}" data-location-id="{{ $product->location_id }}" {{ old('product_id') == $product->id ? 'selected' : '' }}>
                                     {{ $product->name }}
                                     @if ($product->sku)
                                         ({{ $product->sku }})
@@ -318,4 +318,5 @@
 
 @section('js')
 <script src="{{ asset('assets/js/layout.js') }}"></script>
+<script src="{{ asset('assets/js/location-product-filter.js') }}"></script>
 @endsection

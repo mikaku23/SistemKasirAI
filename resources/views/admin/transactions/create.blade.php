@@ -60,6 +60,8 @@ $productCatalog = $products->mapWithKeys(function ($product) {
         'promo_discount' => (int) $product->effective_discount_amount,
         'stock_on_hand' => (int) $product->stock_on_hand,
         'unit_label' => optional($product->unit)->symbol ?? optional($product->unit)->name ?? '-',
+        'location_id' => $product->location_id ? (int) $product->location_id : null,
+        'location_name' => optional($product->location)->name,
     ]];
 })->all();
 @endphp
@@ -226,7 +228,7 @@ $productCatalog = $products->mapWithKeys(function ($product) {
                     <select name="items[0][product_id]" data-product-select required>
                       <option value="">Pilih product</option>
                       @foreach($products as $product)
-                        <option value="{{ $product->id }}" data-barcode="{{ preg_replace('/\D/', '', (string) $product->barcode) }}" data-sale-price="{{ (int)$product->sale_price }}" data-promo-discount="{{ (int)$product->effective_discount_amount }}" data-stock-on-hand="{{ (int)$product->stock_on_hand }}" data-product-name="{{ $product->name }}" data-unit-label="{{ optional($product->unit)->symbol ?? '-' }}">{{ $product->name }} — Rp {{ number_format((int)$product->sale_price,0,',','.') }}</option>
+                        <option value="{{ $product->id }}" data-location-id="{{ $product->location_id }}" data-barcode="{{ preg_replace('/\D/', '', (string) $product->barcode) }}" data-sale-price="{{ (int)$product->sale_price }}" data-promo-discount="{{ (int)$product->effective_discount_amount }}" data-stock-on-hand="{{ (int)$product->stock_on_hand }}" data-product-name="{{ $product->name }}" data-unit-label="{{ optional($product->unit)->symbol ?? '-' }}">{{ $product->name }} — Rp {{ number_format((int)$product->sale_price,0,',','.') }}</option>
                       @endforeach
                     </select>
                   </td>
@@ -247,7 +249,7 @@ $productCatalog = $products->mapWithKeys(function ($product) {
                 <select data-product-select required>
                   <option value="">Pilih product</option>
                   @foreach($products as $product)
-                    <option value="{{ $product->id }}" data-barcode="{{ preg_replace('/\D/', '', (string) $product->barcode) }}" data-sale-price="{{ (int)$product->sale_price }}" data-promo-discount="{{ (int)$product->effective_discount_amount }}" data-stock-on-hand="{{ (int)$product->stock_on_hand }}" data-product-name="{{ $product->name }}" data-unit-label="{{ optional($product->unit)->symbol ?? '-' }}">{{ $product->name }} — Rp {{ number_format((int)$product->sale_price,0,',','.') }}</option>
+                    <option value="{{ $product->id }}" data-location-id="{{ $product->location_id }}" data-barcode="{{ preg_replace('/\D/', '', (string) $product->barcode) }}" data-sale-price="{{ (int)$product->sale_price }}" data-promo-discount="{{ (int)$product->effective_discount_amount }}" data-stock-on-hand="{{ (int)$product->stock_on_hand }}" data-product-name="{{ $product->name }}" data-unit-label="{{ optional($product->unit)->symbol ?? '-' }}">{{ $product->name }} — Rp {{ number_format((int)$product->sale_price,0,',','.') }}</option>
                   @endforeach
                 </select>
               </td>
@@ -319,9 +321,11 @@ $productCatalog = $products->mapWithKeys(function ($product) {
 @endsection
 @section('js')
 <script src="{{ asset('assets/js/layout.js') }}"></script>
+<script src="{{ asset('assets/js/location-product-filter.js') }}"></script>
 <script src="https://cdn.jsdelivr.net/npm/quagga@0.12.1/dist/quagga.min.js"></script>
 <script>
 window.__DISCOUNT_SETTINGS__ = @json($discountSettingsPayload);
+window.__ALL_PRODUCT_CATALOG__ = @json($productCatalog);
 window.__PRODUCT_CATALOG__ = @json($productCatalog);
 window.__BARCODE_LOOKUP_URL_TEMPLATE__ = @json(route('transactions.barcode-lookup', ['barcode' => '__CODE__']));
 (function () {
@@ -331,6 +335,7 @@ window.__BARCODE_LOOKUP_URL_TEMPLATE__ = @json(route('transactions.barcode-looku
   const money = (value) => 'Rp ' + new Intl.NumberFormat('id-ID').format(Math.max(0, Math.round(Number(value || 0))));
   const discountSettings = Array.isArray(window.__DISCOUNT_SETTINGS__) ? window.__DISCOUNT_SETTINGS__ : [];
   const productCatalog = window.__PRODUCT_CATALOG__ && typeof window.__PRODUCT_CATALOG__ === 'object' ? window.__PRODUCT_CATALOG__ : {};
+  const locationSelect = form.querySelector('select[name="location_id"]');
 
   const tbody = form.querySelector('[data-items-tbody]');
   const template = document.getElementById('transactionRowTemplate');
@@ -700,8 +705,13 @@ window.__BARCODE_LOOKUP_URL_TEMPLATE__ = @json(route('transactions.barcode-looku
     const normalized = normalizeBarcode(barcode);
     if (!normalized) return null;
 
-    if (productCatalog[normalized]) {
-      return productCatalog[normalized];
+    const selectedLocationId = String(locationSelect?.value || '');
+    const localProduct = productCatalog[normalized];
+    if (localProduct) {
+      if (!selectedLocationId || String(localProduct.location_id || '') === selectedLocationId) {
+        return localProduct;
+      }
+      return null;
     }
 
     const url = String(window.__BARCODE_LOOKUP_URL_TEMPLATE__ || '').replace('__CODE__', encodeURIComponent(normalized));
@@ -711,7 +721,12 @@ window.__BARCODE_LOOKUP_URL_TEMPLATE__ = @json(route('transactions.barcode-looku
       const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
       if (!response.ok) return null;
       const json = await response.json();
-      return json?.data || null;
+      const product = json?.data || null;
+      if (!product) return null;
+      if (selectedLocationId && String(product.location_id || '') !== selectedLocationId) {
+        return null;
+      }
+      return product;
     } catch (error) {
       return null;
     }
