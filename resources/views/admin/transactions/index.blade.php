@@ -4,6 +4,7 @@
 
 @section('css')
 <link rel="stylesheet" href="{{ asset('assets/css/layout.css') }}">
+<link rel="stylesheet" href="{{ asset('assets/css/finance-summary.css') }}">
 @endsection
 
 @section('content')
@@ -85,32 +86,53 @@
         </div>
     </div>
 
-    <div class="stats-grid" style="margin-top: 1rem;">
-        <div class="stat-card glass-card">
-            <span>Gross Subtotal</span>
-            <strong>Rp {{ number_format($transactionFinanceStats['gross_subtotal'], 0, ',', '.') }}</strong>
-        </div>
-        <div class="stat-card glass-card">
-            <span>Net Revenue</span>
-            <strong>Rp {{ number_format($transactionFinanceStats['net_revenue'], 0, ',', '.') }}</strong>
-        </div>
-        <div class="stat-card glass-card">
-            <span>COGS / Modal</span>
-            <strong>Rp {{ number_format($transactionFinanceStats['cogs_total'], 0, ',', '.') }}</strong>
-        </div>
-        <div class="stat-card glass-card">
-            <span>Gross Profit</span>
-            <strong>Rp {{ number_format($transactionFinanceStats['gross_profit'], 0, ',', '.') }}</strong>
-        </div>
-        <div class="stat-card glass-card">
-            <span>Tax Total</span>
-            <strong>Rp {{ number_format($transactionFinanceStats['tax_total'], 0, ',', '.') }}</strong>
-        </div>
-        <div class="stat-card glass-card">
-            <span>Discount Total</span>
-            <strong>Rp {{ number_format($transactionFinanceStats['discount_total'], 0, ',', '.') }}</strong>
+<div class="table-card glass-card finance-summary-card" style="margin-top: 1rem;">
+    <div class="table-card__head finance-summary-card__head">
+        <div>
+            <p class="eyebrow">TRANSACTIONS</p>
+            <h3>Ringkasan finansial transaksi</h3>
+            <p>Akumulasi omzet, modal, pajak, diskon, dan laba dari transaksi yang tampil di halaman ini.</p>
         </div>
     </div>
+
+    <div class="finance-summary-table-wrap">
+        <table class="finance-summary-table">
+            <thead>
+                <tr>
+                    <th>Indikator</th>
+                    <th class="finance-summary-table__value">Nilai</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="finance-summary-table__label">Gross Subtotal</td>
+                    <td class="finance-summary-table__value is-neutral">Rp {{ number_format($transactionFinanceStats['gross_subtotal'], 0, ',', '.') }}</td>
+                </tr>
+                <tr>
+                    <td class="finance-summary-table__label">Net Revenue</td>
+                    <td class="finance-summary-table__value is-neutral">Rp {{ number_format($transactionFinanceStats['net_revenue'], 0, ',', '.') }}</td>
+                </tr>
+                <tr>
+                    <td class="finance-summary-table__label">COGS / Modal</td>
+                    <td class="finance-summary-table__value is-negative">Rp {{ number_format($transactionFinanceStats['cogs_total'], 0, ',', '.') }}</td>
+                </tr>
+                <tr>
+                    <td class="finance-summary-table__label">Gross Profit</td>
+                    <td class="finance-summary-table__value is-positive">Rp {{ number_format($transactionFinanceStats['gross_profit'], 0, ',', '.') }}</td>
+                </tr>
+                <tr>
+                    <td class="finance-summary-table__label">Tax Total</td>
+                    <td class="finance-summary-table__value is-neutral">Rp {{ number_format($transactionFinanceStats['tax_total'], 0, ',', '.') }}</td>
+                </tr>
+                <tr>
+                    <td class="finance-summary-table__label">Discount Total</td>
+                    <td class="finance-summary-table__value is-negative">Rp {{ number_format($transactionFinanceStats['discount_total'], 0, ',', '.') }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
 
     <div class="table-card glass-card">
         <div class="table-card__head">

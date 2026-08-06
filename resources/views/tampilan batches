@@ -1,0 +1,26 @@
+    <div class="stats-grid" style="margin-top: 1rem;">
+        <div class="stat-card glass-card">
+            <span>Total Modal</span>
+            <strong>Rp {{ number_format($stockFinanceStats['purchase_total'], 0, ',', '.') }}</strong>
+        </div>
+        <div class="stat-card glass-card">
+            <span>Expected Revenue</span>
+            <strong>Rp {{ number_format($stockFinanceStats['expected_revenue_total'], 0, ',', '.') }}</strong>
+        </div>
+        <div class="stat-card glass-card">
+            <span>Expected Profit</span>
+            <strong>Rp {{ number_format($stockFinanceStats['expected_profit_total'], 0, ',', '.') }}</strong>
+        </div>
+        <div class="stat-card glass-card">
+            <span>Sold Revenue</span>
+            <strong>Rp {{ number_format($stockFinanceStats['sold_revenue_total'], 0, ',', '.') }}</strong>
+        </div>
+        <div class="stat-card glass-card">
+            <span>Sold COGS</span>
+            <strong>Rp {{ number_format($stockFinanceStats['sold_cogs_total'], 0, ',', '.') }}</strong>
+        </div>
+        <div class="stat-card glass-card">
+            <span>Realized Profit</span>
+            <strong>Rp {{ number_format($stockFinanceStats['realized_profit_total'], 0, ',', '.') }}</strong>
+        </div>
+    </div>

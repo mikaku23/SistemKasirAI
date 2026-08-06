@@ -1,9 +1,9 @@
-
 /* Finance summary table for batch / transaction stats */
 .finance-summary-card {
   display: grid;
   gap: 1rem;
   padding: 1rem;
+  width: 100%;
 }
 
 .finance-summary-card__head h3 {
@@ -20,16 +20,18 @@
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(12, 18, 36, 0.55);
+  width: 100%;
 }
 
 .finance-summary-table {
   width: 100%;
   border-collapse: collapse;
   min-width: 100%;
+  table-layout: fixed;
 }
 
 .finance-summary-table thead th {
-  text-align: left;
+  text-align: center;
   padding: 0.95rem 1rem;
   font-size: 0.78rem;
   text-transform: uppercase;
@@ -39,10 +41,24 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+.finance-summary-table thead th:first-child,
+.finance-summary-table tbody td:first-child {
+  width: 68%;
+}
+
+.finance-summary-table thead th:last-child,
+.finance-summary-table tbody td:last-child {
+  width: 32%;
+}
+
 .finance-summary-table tbody td {
   padding: 0.95rem 1rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   vertical-align: middle;
+}
+
+.finance-summary-table tbody td {
+  text-align: center;
 }
 
 .finance-summary-table tbody tr:last-child td {
@@ -56,10 +72,11 @@
 .finance-summary-table__label {
   font-weight: 700;
   color: inherit;
+  text-align: center;
 }
 
 .finance-summary-table__value {
-  text-align: right;
+  text-align: center;
   white-space: nowrap;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
@@ -85,5 +102,15 @@
   .finance-summary-table thead th,
   .finance-summary-table tbody td {
     padding: 0.8rem 0.85rem;
+  }
+
+  .finance-summary-table thead th:first-child,
+  .finance-summary-table tbody td:first-child {
+    width: 62%;
+  }
+
+  .finance-summary-table thead th:last-child,
+  .finance-summary-table tbody td:last-child {
+    width: 38%;
   }
 }

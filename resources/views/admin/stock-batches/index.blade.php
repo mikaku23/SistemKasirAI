@@ -4,6 +4,7 @@
 
 @section('css')
 <link rel="stylesheet" href="{{ asset('assets/css/layout.css') }}">
+<link rel="stylesheet" href="{{ asset('assets/css/finance-summary.css') }}">
 @endsection
 
 @section('content')
@@ -114,32 +115,53 @@
         </div>
     </div>
 
-    <div class="stats-grid" style="margin-top: 1rem;">
-        <div class="stat-card glass-card">
-            <span>Total Modal</span>
-            <strong>Rp {{ number_format($stockFinanceStats['purchase_total'], 0, ',', '.') }}</strong>
-        </div>
-        <div class="stat-card glass-card">
-            <span>Expected Revenue</span>
-            <strong>Rp {{ number_format($stockFinanceStats['expected_revenue_total'], 0, ',', '.') }}</strong>
-        </div>
-        <div class="stat-card glass-card">
-            <span>Expected Profit</span>
-            <strong>Rp {{ number_format($stockFinanceStats['expected_profit_total'], 0, ',', '.') }}</strong>
-        </div>
-        <div class="stat-card glass-card">
-            <span>Sold Revenue</span>
-            <strong>Rp {{ number_format($stockFinanceStats['sold_revenue_total'], 0, ',', '.') }}</strong>
-        </div>
-        <div class="stat-card glass-card">
-            <span>Sold COGS</span>
-            <strong>Rp {{ number_format($stockFinanceStats['sold_cogs_total'], 0, ',', '.') }}</strong>
-        </div>
-        <div class="stat-card glass-card">
-            <span>Realized Profit</span>
-            <strong>Rp {{ number_format($stockFinanceStats['realized_profit_total'], 0, ',', '.') }}</strong>
+<div class="table-card glass-card finance-summary-card" style="margin-top: 1rem;">
+    <div class="table-card__head finance-summary-card__head">
+        <div>
+            <p class="eyebrow">BATCH STOK & MODAL</p>
+            <h3>Ringkasan finansial batch</h3>
+            <p>Akumulasi modal, estimasi omzet, laba, dan rugi dari semua batch yang tampil di halaman ini.</p>
         </div>
     </div>
+
+    <div class="finance-summary-table-wrap">
+        <table class="finance-summary-table">
+            <thead>
+                <tr>
+                    <th>Indikator</th>
+                    <th class="finance-summary-table__value">Nilai</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="finance-summary-table__label">Total Modal Batch</td>
+                    <td class="finance-summary-table__value is-neutral">Rp {{ number_format($stockFinanceStats['purchase_total'], 0, ',', '.') }}</td>
+                </tr>
+                <tr>
+                    <td class="finance-summary-table__label">Estimasi Omzet</td>
+                    <td class="finance-summary-table__value is-neutral">Rp {{ number_format($stockFinanceStats['expected_revenue_total'], 0, ',', '.') }}</td>
+                </tr>
+                <tr>
+                    <td class="finance-summary-table__label">Estimasi Laba</td>
+                    <td class="finance-summary-table__value is-positive">Rp {{ number_format($stockFinanceStats['expected_profit_total'], 0, ',', '.') }}</td>
+                </tr>
+                <tr>
+                    <td class="finance-summary-table__label">Sold Revenue</td>
+                    <td class="finance-summary-table__value is-neutral">Rp {{ number_format($stockFinanceStats['sold_revenue_total'], 0, ',', '.') }}</td>
+                </tr>
+                <tr>
+                    <td class="finance-summary-table__label">Sold COGS</td>
+                    <td class="finance-summary-table__value is-negative">Rp {{ number_format($stockFinanceStats['sold_cogs_total'], 0, ',', '.') }}</td>
+                </tr>
+                <tr>
+                    <td class="finance-summary-table__label">Realized Profit</td>
+                    <td class="finance-summary-table__value is-positive">Rp {{ number_format($stockFinanceStats['realized_profit_total'], 0, ',', '.') }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
 
     <div class="table-card glass-card">
         <div class="table-card__head">
