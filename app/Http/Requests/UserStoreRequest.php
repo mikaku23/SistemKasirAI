@@ -31,7 +31,9 @@ class UserStoreRequest extends FormRequest
         ]);
 
         if (Schema::hasColumn('users', 'is_active')) {
-            $this->merge(['is_active' => $this->boolean('is_active')]);
+            $this->merge([
+                'is_active' => $this->has('is_active') ? $this->boolean('is_active') : true,
+            ]);
         }
     }
 
@@ -53,7 +55,7 @@ class UserStoreRequest extends FormRequest
         ];
 
         if (Schema::hasColumn('users', 'is_active')) {
-            $rules['is_active'] = ['required', 'boolean'];
+            $rules['is_active'] = ['boolean'];
         }
 
         return $rules;

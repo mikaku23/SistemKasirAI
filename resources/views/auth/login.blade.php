@@ -1,3 +1,4 @@
+
 @extends('template-auth.layout')
 
 @section('title', 'Login Admin')
@@ -11,6 +12,22 @@
                     <div class="brand-mark">
                         <i class="fa-solid fa-shield-halved icon--brand" aria-hidden="true"></i>
                     </div>
+
+                    @if(\Illuminate\Support\Facades\Auth::check())
+                    @php
+                    $role = \Illuminate\Support\Facades\Auth::user()->role->slug ?? null;
+                    @endphp
+
+                    @if($role === 'admin')
+                    <script>
+                        window.location = "{{ route('dashboardadmin') }}";
+                    </script>
+                    @elseif($role === 'cashier')
+                    <script>
+                        window.location = "{{ route('dashboardcashier') }}";
+                    </script>
+                    @endif
+                    @endif
                     <div>
                         <p class="eyebrow">Secure Access</p>
                         <strong>Glass Admin</strong>
@@ -77,20 +94,20 @@
                 </div>
 
                 @if (session('success'))
-                    <div class="form-alert form-alert--info">
-                        <strong>{{ session('success') }}</strong>
-                    </div>
+                <div class="form-alert form-alert--info">
+                    <strong>{{ session('success') }}</strong>
+                </div>
                 @endif
 
                 @if ($errors->any())
-                    <div class="form-alert form-alert--danger">
-                        <strong>Login gagal.</strong>
-                        <ul>
-                            @foreach ($errors->all() as $error)
-                                <li>{{ $error }}</li>
-                            @endforeach
-                        </ul>
-                    </div>
+                <div class="form-alert form-alert--danger">
+                    <strong>Login gagal.</strong>
+                    <ul>
+                        @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
                 @endif
 
                 <form action="{{ route('login') }}" method="POST" class="auth-form" autocomplete="off">

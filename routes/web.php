@@ -19,19 +19,31 @@ use App\Http\Controllers\TaxSettingController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\VisitorController;
 use Illuminate\Support\Facades\Route;
-
-Route::get('/dashboard-admin', function () {
-    return view('admin.index', [
-        'menu' => 'dashboard',
-    ]);
-})->name('dashboardadmin');
 
  Route::get('/', [AuthController::class, 'create'])->name('login.form');
     Route::post('/login', [AuthController::class, 'store'])->name('login');
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
+
 // Roles
+Route::middleware(['auth', 'role:Cashier'])->group(function () {
+Route::get('/dashboard', function () {
+    return view('cashier.index', [
+        'menu' => 'dashboard',
+    ]);
+})->name('dashboardcashier');
+});
+
+Route::middleware(['auth', 'role:Admin'])->group(function () {
+
+    Route::get('/dashboard-admin', function () {
+        return view('admin.index', [
+            'menu' => 'dashboard',
+        ]);
+    })->name('dashboardadmin');
+
 Route::get('roles/recycle', [RoleController::class, 'recycle'])->name('roles.recycle');
 Route::post('roles/{role}/restore', [RoleController::class, 'restore'])
     ->whereNumber('role')
@@ -165,3 +177,11 @@ Route::get('/activity-logs/show', [ActivityLogController::class, 'show'])->name(
 
 Route::get('/system-logs', [SystemLogController::class, 'index'])->name('system-logs.index');
 Route::get('/system-logs/show', [SystemLogController::class, 'show'])->name('system-logs.show');
+
+Route::get('/visitors', [VisitorController::class, 'index'])
+    ->name('visitors.index');
+
+Route::get('/visitors/{visitor}', [VisitorController::class, 'show'])
+    ->whereNumber('visitor')
+    ->name('visitors.show');
+});

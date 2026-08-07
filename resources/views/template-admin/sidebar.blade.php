@@ -103,6 +103,10 @@
             <a href="{{ route('system-logs.index') }}" class="nav-item {{ $menu == 'system-logs' ? 'active' : '' }}">
                 <i class="icon fa-solid fa-server" aria-hidden="true"></i><span>System Logs</span>
             </a>
+            <a href="{{ route('visitors.index') }}" class="nav-item {{ $menu == 'visitors' ? 'active' : '' }}">
+                <i class="icon fa-solid fa-right-to-bracket" aria-hidden="true"></i><span>Login Logs</span>
+            </a>
+
 
 
         </div>

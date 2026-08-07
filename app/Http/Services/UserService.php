@@ -66,7 +66,7 @@ class UserService
             'inactive' => $hasIsActiveColumn ? User::query()->where('is_active', false)->count() : 0,
             'trashed' => User::onlyTrashed()->count(),
             'admins' => User::query()
-                ->whereHas('role', fn ($query) => $query->where('slug', 'admin'))
+                ->whereHas('role', fn($query) => $query->where('slug', 'admin'))
                 ->count(),
         ];
     }
@@ -167,8 +167,8 @@ class UserService
         $user->forceDelete();
     }
 
-    
-public function payload(User $user): array
+
+    public function payload(User $user): array
     {
         $user->loadMissing(['role', 'location']);
 
@@ -195,7 +195,7 @@ public function payload(User $user): array
         ];
     }
 
-protected function normalizePayload(array $data, ?User $user = null): array
+    protected function normalizePayload(array $data, ?User $user = null): array
     {
         $payload = [
             'role_id' => $this->nullableInteger($data['role_id'] ?? null),
@@ -211,7 +211,11 @@ protected function normalizePayload(array $data, ?User $user = null): array
         ];
 
         if (Schema::hasColumn('users', 'is_active')) {
-            $payload['is_active'] = $this->booleanValue($data['is_active'] ?? false);
+            if (array_key_exists('is_active', $data)) {
+                $payload['is_active'] = $this->booleanValue($data['is_active']);
+            } elseif ($user === null) {
+                $payload['is_active'] = true;
+            }
         }
 
         if (array_key_exists('password', $data)) {
@@ -313,7 +317,7 @@ protected function normalizePayload(array $data, ?User $user = null): array
         }
 
         $activeAdminCount = User::query()
-            ->whereHas('role', fn ($query) => $query->where('slug', 'admin'))
+            ->whereHas('role', fn($query) => $query->where('slug', 'admin'))
             ->where('is_active', true)
             ->whereKeyNot($target->id)
             ->count();

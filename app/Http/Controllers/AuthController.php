@@ -3,70 +3,63 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Support\VisitorSessionLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class AuthController extends Controller
 {
+    public function __construct(
+        protected VisitorSessionLogger $visitorLogger
+    ) {
+    }
+
     public function create(): View
     {
-        $this->auditActivity(__FUNCTION__);
-
         return view('auth.login');
     }
 
     public function store(Request $request): RedirectResponse
     {
-        $this->auditActivity(__FUNCTION__);
-
         $validated = $request->validate([
             'login' => ['required', 'string', 'max:255'],
             'password' => ['required', 'string', 'min:3'],
             'remember' => ['nullable', 'boolean'],
         ], [
-            'login.required' => 'Username, email, NIM, atau NIP wajib diisi.',
+            'login.required' => 'Username wajib diisi.',
             'password.required' => 'Password wajib diisi.',
-            'password.min' => 'Password minimal 6 karakter.',
+            'password.min' => 'Password minimal 3 karakter.',
         ]);
 
         $login = trim((string) $validated['login']);
 
         $user = User::with('role')
             ->where(function ($query) use ($login) {
-                $query->where('username', $login)
-                    ->orWhere('email', $login);
-                   
+                $query->where('username', $login);
             })
             ->first();
 
         if (! $user || ! Hash::check((string) $validated['password'], (string) $user->password)) {
-            $this->auditSystem('warning', 'auth', 'Login gagal', [
-                'action' => 'login_failed',
-                'metadata' => [
-                    'login' => $login,
-                ],
+            throw ValidationException::withMessages([
+                'login' => 'Login gagal. Periksa kembali identitas dan password.',
             ]);
-
-            return back()
-                ->withErrors(['login' => 'Login gagal. Periksa kembali identitas dan password.'])
-                ->withInput($request->only('login', 'remember'));
         }
 
-        if (strtolower((string) $user->role?->slug) !== 'admin') {
-            $this->auditSystem('warning', 'auth', 'Akun tidak memiliki akses admin', [
-                'action' => 'login_blocked',
-                'metadata' => [
-                    'user_id' => $user->id,
-                    'role' => $user->role?->slug,
-                ],
+        if (! $user->is_active) {
+            throw ValidationException::withMessages([
+                'login' => 'Akun Anda sedang nonaktif.',
             ]);
+        }
 
-            return back()
-                ->withErrors(['login' => 'Akun ini tidak memiliki akses admin.'])
-                ->withInput($request->only('login', 'remember'));
+        if (! $user->role || ! $user->role->is_active) {
+            throw ValidationException::withMessages([
+                'login' => 'Role akun tidak valid atau sedang nonaktif.',
+            ]);
         }
 
         Auth::login($user, $request->boolean('remember'));
@@ -76,33 +69,34 @@ class AuthController extends Controller
             'last_login_at' => now(),
         ])->save();
 
-        $this->auditSystem('info', 'auth', 'Login berhasil', [
-            'action' => 'login_success',
-            'user_id' => $user->id,
-            'metadata' => [
-                'remember' => $request->boolean('remember'),
-            ],
-        ]);
+        $this->visitorLogger->sync($request, $user, 'login');
+
+        $routeName = match (strtolower((string) $user->role->name)) {
+            'admin' => 'dashboardadmin',
+            'cashier' => 'dashboardcashier',
+            default => 'dashboardadmin',
+        };
+
+        if (Route::has($routeName)) {
+            return redirect()->route($routeName)->with('success', 'Login berhasil.');
+        }
 
         return redirect()
-            ->intended(route('dashboardadmin'))
+            ->to($routeName === 'dashboardcashier' ? url('/dashboard-cashier') : url('/dashboard-admin'))
             ->with('success', 'Login berhasil.');
     }
 
     public function logout(Request $request): RedirectResponse
     {
-        $this->auditActivity(__FUNCTION__);
-
         $user = $request->user();
+
+        if ($user) {
+            $this->visitorLogger->sync($request, $user, 'logout');
+        }
 
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-
-        $this->auditSystem('info', 'auth', 'Logout berhasil', [
-            'action' => 'logout',
-            'user_id' => $user?->id,
-        ]);
 
         return redirect()
             ->route('login.form')

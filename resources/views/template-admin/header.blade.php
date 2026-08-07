@@ -16,25 +16,89 @@
             <input type="search" placeholder="Search products, logs, AI..." />
             <kbd>Ctrl K</kbd>
         </label>
+
         <button class="icon-btn" type="button" data-action="theme-toggle" aria-label="Toggle theme">
             <i class="icon theme-icon theme-icon--moon fa-solid fa-moon" aria-hidden="true"></i>
             <i class="icon theme-icon theme-icon--sun fa-solid fa-sun" aria-hidden="true"></i>
         </button>
+
         <button class="icon-btn" type="button" aria-label="Notifications">
             <i class="icon fa-solid fa-bell" aria-hidden="true"></i>
             <span class="badge badge--hot">3</span>
         </button>
-        <form action="{{ route('logout') }}" method="POST" class="profile-chip" style="cursor:pointer;">
-            @csrf
-            <button type="submit" class="icon-btn"
-                style="display:flex; align-items:center; gap:0.75rem; padding:0; border:0; background:transparent; color:inherit;"
-                aria-label="Logout">
-                <div class="avatar">A</div>
-                <div style="text-align:left;">
-                    <strong>{{ auth()->user()?->name ?? 'Admin' }}</strong>
-                    <small>{{ auth()->user()?->role?->name ?? 'Administrator' }}</small>
+        @auth
+        @php
+        $authUser = auth()->user();
+        $userName = $authUser?->name ?? 'User';
+
+        $roleName = $authUser?->user_role_name
+        ?? $authUser?->role_name
+        ?? $authUser?->role?->name
+        ?? $authUser?->roles?->first()?->name
+        ?? 'User';
+
+        $avatarPath = $authUser?->avatar;
+        $avatarUrl = null;
+
+        if (!empty($avatarPath)) {
+        $avatarUrl = preg_match('#^https?://#i', $avatarPath)
+        ? $avatarPath
+        : \Illuminate\Support\Facades\Storage::disk('public')->url($avatarPath);
+        }
+        @endphp
+
+        <details class="profile-menu">
+            <summary class="profile-chip profile-chip--button" aria-label="Open profile menu" aria-haspopup="menu">
+                @if (!empty($avatarUrl))
+                <div
+                    class="avatar profile-chip__avatar"
+                    style="background-image:url('{{ $avatarUrl }}'); background-size:cover; background-position:center; background-repeat:no-repeat;"></div>
+                @else
+                <div class="avatar profile-chip__avatar">{{ strtoupper(mb_substr($userName ?? 'U', 0, 1)) }}</div>
+                @endif
+
+                <div class="profile-chip__copy">
+                    <strong>{{ $userName }}</strong>
+                    <small>{{ $roleName }}</small>
                 </div>
-            </button>
-        </form>
+
+                <i class="icon profile-chip__chevron fa-solid fa-chevron-down" aria-hidden="true"></i>
+            </summary>
+
+            <div class="profile-menu__dropdown" role="menu" aria-label="Profile actions">
+                <div class="profile-menu__info">
+                    @if (!empty($avatarUrl))
+                    <div
+                        class="avatar avatar--large"
+                        style="background-image:url('{{ $avatarUrl }}'); background-size:cover; background-position:center; background-repeat:no-repeat;"></div>
+                    @else
+                    <div class="avatar avatar--large">{{ strtoupper(mb_substr($userName ?? 'U', 0, 1)) }}</div>
+                    @endif
+
+                    <div class="profile-menu__copy">
+                        <strong>{{ $userName }}</strong>
+                        <small>{{ $roleName }}</small>
+                    </div>
+                </div>
+
+                <form method="POST" action="{{ route('logout') }}">
+                    @csrf
+                    <button class="profile-menu__logout" type="submit">
+                        <i class="icon fa-solid fa-right-from-bracket" aria-hidden="true"></i>
+                        <span>Logout</span>
+                    </button>
+                </form>
+            </div>
+        </details>
+        @else
+        <div class="profile-chip">
+            <div class="avatar">U</div>
+            <div>
+                <strong>Guest</strong>
+                <small>Unauthorized</small>
+            </div>
+        </div>
+        @endauth
+
     </div>
 </header>

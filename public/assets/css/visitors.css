@@ -1,0 +1,116 @@
+.visitors-page {
+    display: grid;
+    gap: 1rem;
+}
+
+.visitors-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.visitors-filter-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.visitors-filter-actions,
+.visitors-filter-meta,
+.visitor-detail-head {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    flex-wrap: wrap;
+}
+
+.visitor-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    padding: .45rem .75rem;
+    border-radius: 999px;
+    background: rgba(255,255,255,.08);
+    font-size: .85rem;
+}
+
+.visitors-table-wrap {
+    overflow: auto;
+}
+
+.visitors-table code,
+.visitor-token-cell code {
+    word-break: break-all;
+    font-size: .85rem;
+}
+
+.visitor-stack {
+    display: grid;
+    gap: .15rem;
+}
+
+.visitors-empty {
+    padding: 1.25rem;
+    text-align: center;
+}
+
+.visitor-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.visitor-detail-card {
+    padding: 1.25rem;
+    border-radius: 1.25rem;
+}
+
+.visitor-detail-list {
+    display: grid;
+    gap: .9rem;
+    margin-top: 1rem;
+}
+
+.visitor-detail-list div {
+    display: grid;
+    gap: .2rem;
+}
+
+.visitor-detail-list dt,
+.visitor-muted {
+    opacity: .7;
+    font-size: .82rem;
+}
+
+.visitor-json {
+    max-height: 420px;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    padding: 1rem;
+    border-radius: 1rem;
+    background: rgba(0,0,0,.2);
+}
+
+.visitor-wrap {
+    word-break: break-word;
+}
+
+@media (max-width: 1200px) {
+    .visitors-summary-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .visitors-filter-grid,
+    .visitor-detail-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .visitors-summary-grid,
+    .visitors-filter-grid,
+    .visitor-detail-grid {
+        grid-template-columns: 1fr;
+    }
+}

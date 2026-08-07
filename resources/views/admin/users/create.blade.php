@@ -8,9 +8,9 @@
 
 @section('content')
 @php
-    $user = $user ?? [];
-    $roles = $roles ?? [];
-    $locations = $locations ?? [];
+$user = $user ?? [];
+$roles = $roles ?? [];
+$locations = $locations ?? [];
 @endphp
 
 <section class="page-card glass-card role-page">
@@ -30,14 +30,14 @@
     </div>
 
     @if ($errors->any())
-        <div class="form-alert form-alert--danger">
-            <strong>Periksa kembali data yang diisi.</strong>
-            <ul>
-                @foreach ($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </div>
+    <div class="form-alert form-alert--danger">
+        <strong>Periksa kembali data yang diisi.</strong>
+        <ul>
+            @foreach ($errors->all() as $error)
+            <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+    </div>
     @endif
 
     <form
@@ -48,7 +48,7 @@
         data-step-form
         data-draft-key="users:create">
         @csrf
-
+        <input type="hidden" name="is_active" value="1">
 
         <div class="stepper">
             <span class="step active" data-step-indicator="1">1</span>
@@ -70,11 +70,11 @@
                         <select name="role_id" required>
                             <option value="">Pilih role</option>
                             @forelse ($roles as $role)
-                                <option value="{{ $role->id }}" {{ old('role_id') == $role->id ? 'selected' : '' }}>
-                                    {{ $role->name }}
-                                </option>
+                            <option value="{{ $role->id }}" {{ old('role_id') == $role->id ? 'selected' : '' }}>
+                                {{ $role->name }}
+                            </option>
                             @empty
-                                <option value="" disabled>Tidak ada data role</option>
+                            <option value="" disabled>Tidak ada data role</option>
                             @endforelse
                         </select>
                     </label>
@@ -84,11 +84,11 @@
                         <select name="location_id">
                             <option value="">Pilih lokasi</option>
                             @forelse ($locations as $location)
-                                <option value="{{ $location->id }}" {{ old('location_id') == $location->id ? 'selected' : '' }}>
-                                    {{ $location->name }}
-                                </option>
+                            <option value="{{ $location->id }}" {{ old('location_id') == $location->id ? 'selected' : '' }}>
+                                {{ $location->name }}
+                            </option>
                             @empty
-                                <option value="" disabled>Tidak ada data lokasi</option>
+                            <option value="" disabled>Tidak ada data lokasi</option>
                             @endforelse
                         </select>
                     </label>
@@ -200,7 +200,7 @@
                     <p>Tambahkan data sistem dan cek ringkasan sebelum disimpan.</p>
                 </div>
 
-              
+
 
                 <div class="review-grid">
                     <div class="review-item">
