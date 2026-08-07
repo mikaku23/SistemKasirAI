@@ -2,6 +2,8 @@
 
 namespace App\Http\Services;
 
+
+use App\Support\AuditTrail;
 use App\Models\DiscountSetting;
 use App\Models\Location;
 use App\Models\Product;
@@ -19,8 +21,13 @@ use Illuminate\Validation\ValidationException;
 
 class TransactionService
 {
+    use AuditTrail;
+
     public function indexData(): array
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         return [
             'transactions' => $this->activeTransactions(),
             'transactionStats' => $this->stats(),
@@ -51,24 +58,41 @@ class TransactionService
 
 
     public function findProductByBarcode(string $barcode): ?array
-{
-    $normalized = $this->normalizeBarcodeLookup($barcode);
+    {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
 
-    if ($normalized === '') {
-        return null;
-    }
+        $normalized = $this->normalizeBarcodeLookup($barcode);
 
-    $product = Product::query()
-        ->with(['unit', 'category', 'supplier', 'location'])
-        ->where('barcode', $normalized)
-        ->where('is_active', true)
-        ->first();
+        if ($normalized === '') {
+            $this->auditSystem('warning', class_basename(static::class), 'Barcode kosong atau tidak valid', [
+                'action' => 'barcode_lookup_failed',
+                'metadata' => [
+                    'barcode' => $barcode,
+                ],
+            ]);
 
-    if (! $product) {
-        return null;
-    }
+            return null;
+        }
 
-    return [
+        $product = Product::query()
+            ->with(['unit', 'category', 'supplier', 'location'])
+            ->where('barcode', $normalized)
+            ->where('is_active', true)
+            ->first();
+
+        if (! $product) {
+            $this->auditSystem('warning', class_basename(static::class), 'Produk tidak ditemukan berdasarkan barcode', [
+                'action' => 'barcode_lookup_not_found',
+                'metadata' => [
+                    'barcode' => $normalized,
+                ],
+            ]);
+
+            return null;
+        }
+
+        return [
         'id' => $product->id,
         'barcode' => $product->barcode,
         'name' => $product->name,
@@ -100,6 +124,9 @@ class TransactionService
 
     public function store(array $data, ?User $user = null): Transaction
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $payload = $this->normalizePayload($data);
         $taxSetting = TaxSetting::query()->where('is_active', true)->findOrFail($payload['tax_setting_id']);
         $transactionAt = Carbon::parse($payload['transaction_at']);

@@ -18,16 +18,22 @@ class TransactionController extends Controller
 
     public function index(): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.transactions.index', array_merge($this->transactionService->indexData(), ['menu' => 'transactions']));
     }
 
     public function create(): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.transactions.create', array_merge($this->transactionService->referenceData(), ['menu' => 'transactions']));
     }
 
     public function store(TransactionStoreRequest $request): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $transaction = $this->transactionService->store($request->validated(), auth()->user());
 
         return redirect()->route('transactions.show', $transaction->id)
@@ -37,6 +43,8 @@ class TransactionController extends Controller
 
     public function show(Transaction $transaction): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.transactions.show', [
             'menu' => 'transactions',
             'transaction' => $transaction->load(['location', 'cashier', 'taxSetting', 'discountSetting', 'items.product', 'items.stockBatch', 'stockMovements.stockBatch']),
@@ -45,6 +53,8 @@ class TransactionController extends Controller
 
     public function lookupBarcode(string $barcode): JsonResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $product = $this->transactionService->findProductByBarcode($barcode);
 
         if (! $product) {
@@ -61,6 +71,8 @@ class TransactionController extends Controller
 
     public function print(Transaction $transaction)
     {
+        $this->auditActivity(__FUNCTION__);
+
         $transaction->load(['location', 'cashier', 'taxSetting', 'discountSetting', 'items.product', 'items.stockBatch', 'stockMovements.stockBatch']);
 
         if (class_exists(PdfFacade::class)) {

@@ -1,0 +1,191 @@
+.observability-page .page-card__actions {
+    flex-wrap: wrap;
+    align-items: flex-start;
+}
+
+.observability-page .observability-filter-card,
+.observability-page .observability-summary-card,
+.observability-page .observability-table-card {
+    padding: 1rem;
+}
+
+.observability-page .observability-filter-card {
+    display: grid;
+    gap: 1rem;
+}
+
+.observability-page .observability-filter-card .wizard-form-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.observability-page .observability-filter-actions {
+    margin-top: 0;
+    flex-wrap: wrap;
+}
+
+.observability-page .observability-filter-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+    align-items: center;
+}
+
+.observability-page .observability-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    min-height: 38px;
+    padding: 0.55rem 0.8rem;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.04);
+    color: inherit;
+    font-size: 0.9rem;
+    line-height: 1;
+}
+
+.observability-page .observability-chip strong {
+    font-weight: 700;
+}
+
+.observability-page .observability-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 0.9rem;
+}
+
+.observability-page .observability-summary-card .stat-card {
+    min-height: 100%;
+}
+
+.observability-page .observability-table-wrap {
+    overflow: auto;
+    border-radius: 1rem;
+}
+
+.observability-page .observability-table {
+    width: 100%;
+    min-width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.observability-page .observability-table thead th {
+    font-size: 0.8rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    opacity: 0.84;
+    padding: 1rem 0.95rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    vertical-align: middle;
+}
+
+.observability-page .observability-table tbody td {
+    padding: 0.95rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    vertical-align: top;
+}
+
+.observability-page .observability-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.observability-page .observability-strong {
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+.observability-page .observability-muted {
+    opacity: 0.76;
+    font-size: 0.88rem;
+    line-height: 1.45;
+}
+
+.observability-page .observability-stack {
+    display: grid;
+    gap: 0.35rem;
+}
+
+.observability-page .observability-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+}
+
+.observability-page .observability-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.36rem 0.62rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.06);
+    font-size: 0.84rem;
+    line-height: 1;
+}
+
+.observability-page .observability-tag small {
+    opacity: 0.7;
+}
+
+.observability-page .observability-detail-grid {
+    display: grid;
+    gap: 1rem;
+}
+
+.observability-page .observability-detail-grid .wizard-form-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.observability-page .observability-raw {
+    white-space: pre-wrap;
+    word-break: break-word;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 1rem;
+    padding: 1rem;
+    margin: 0;
+    font-size: 0.88rem;
+    line-height: 1.55;
+}
+
+.observability-page .observability-empty {
+    padding: 2rem 1rem;
+    text-align: center;
+}
+
+.observability-page .observability-empty strong {
+    display: block;
+    font-size: 1rem;
+}
+
+.observability-page .observability-empty p {
+    margin: 0.4rem 0 0;
+    opacity: 0.78;
+}
+
+@media (max-width: 1180px) {
+    .observability-page .observability-filter-card .wizard-form-grid,
+    .observability-page .observability-detail-grid .wizard-form-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .observability-page .observability-summary-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 720px) {
+    .observability-page .observability-filter-card .wizard-form-grid,
+    .observability-page .observability-detail-grid .wizard-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .observability-page .observability-summary-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .observability-page .observability-table thead th,
+    .observability-page .observability-table tbody td {
+        padding: 0.8rem 0.75rem;
+    }
+}

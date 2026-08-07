@@ -17,6 +17,8 @@ class StockAdjustmentController extends Controller
 
     public function index(): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.stock-adjustments.index', array_merge($this->stockAdjustmentService->indexData(), [
             'menu' => 'stock-adjustments',
         ]));
@@ -24,6 +26,8 @@ class StockAdjustmentController extends Controller
 
     public function create(): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.stock-adjustments.create', array_merge($this->stockAdjustmentService->referenceData(), [
             'menu' => 'stock-adjustments',
         ]));
@@ -31,12 +35,29 @@ class StockAdjustmentController extends Controller
 
     public function store(StockAdjustmentStoreRequest $request): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $adjustment = $this->stockAdjustmentService->store($request->validated(), auth()->user());
 
         $difference = (int) $adjustment->difference_qty;
         $message = $difference === 0
             ? 'Pengecekan stok tersimpan. Hasilnya sudah cocok dengan sistem.'
             : 'Pengecekan stok tersimpan. Selisih ' . number_format(abs($difference), 0, ',', '.') . ' pcs menunggu verifikasi.';
+
+        $this->auditSystem(
+            $difference === 0 ? 'info' : 'warning',
+            'stock-adjustments',
+            $difference === 0 ? 'Stok fisik cocok dengan sistem' : 'Stok fisik berbeda dengan sistem',
+            [
+                'action' => 'stock_adjustment_created',
+                'user_id' => auth()->id(),
+                'metadata' => [
+                    'stock_adjustment_id' => $adjustment->id,
+                    'difference_qty' => $difference,
+                    'review_status' => $adjustment->review_status,
+                ],
+            ]
+        );
 
         return redirect()
             ->route('stock-adjustments.index')
@@ -46,6 +67,8 @@ class StockAdjustmentController extends Controller
 
     public function show(StockAdjustment $stock_adjustment): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.stock-adjustments.show', array_merge($this->stockAdjustmentService->referenceData(), [
             'menu' => 'stock-adjustments',
             'stockAdjustment' => $stock_adjustment->load(['product.category', 'product.unit', 'stockBatch', 'location', 'user']),
@@ -55,7 +78,18 @@ class StockAdjustmentController extends Controller
 
     public function confirmSystemCorrect(StockAdjustment $stock_adjustment): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->stockAdjustmentService->confirmSystemCorrect($stock_adjustment, auth()->user());
+
+        $this->auditSystem('info', 'stock-adjustments', 'Stok sistem dipertahankan', [
+            'action' => 'confirm_system_correct',
+            'target_type' => StockAdjustment::class,
+            'target_id' => $stock_adjustment->id,
+            'metadata' => [
+                'review_status' => $stock_adjustment->review_status,
+            ],
+        ]);
 
         return redirect()
             ->route('stock-adjustments.index')
@@ -64,7 +98,18 @@ class StockAdjustmentController extends Controller
 
     public function applyCorrection(StockAdjustment $stock_adjustment): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->stockAdjustmentService->applyCorrection($stock_adjustment, auth()->user());
+
+        $this->auditSystem('info', 'stock-adjustments', 'Koreksi stok sistem diterapkan', [
+            'action' => 'apply_correction',
+            'target_type' => StockAdjustment::class,
+            'target_id' => $stock_adjustment->id,
+            'metadata' => [
+                'review_status' => $stock_adjustment->review_status,
+            ],
+        ]);
 
         return redirect()
             ->route('stock-adjustments.index')

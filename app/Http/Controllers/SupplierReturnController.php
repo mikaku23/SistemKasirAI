@@ -17,6 +17,8 @@ class SupplierReturnController extends Controller
 
     public function index(): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.supplier-returns.index', array_merge($this->supplierReturnService->indexData(), [
             'menu' => 'supplier-returns',
         ]));
@@ -24,6 +26,8 @@ class SupplierReturnController extends Controller
 
     public function recycle(): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.supplier-returns.recycle', array_merge($this->supplierReturnService->indexData(), [
             'menu' => 'supplier-returns',
         ]));
@@ -31,6 +35,8 @@ class SupplierReturnController extends Controller
 
     public function create(): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.supplier-returns.create', array_merge($this->supplierReturnService->referenceData(), [
             'menu' => 'supplier-returns',
         ]));
@@ -38,6 +44,8 @@ class SupplierReturnController extends Controller
 
     public function store(SupplierReturnStoreRequest $request): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $return = $this->supplierReturnService->store($request->validated(), auth()->user());
 
         return redirect()
@@ -47,6 +55,8 @@ class SupplierReturnController extends Controller
 
     public function show(Returns $supplier_return): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.supplier-returns.show', array_merge($this->supplierReturnService->showData($supplier_return), [
             'menu' => 'supplier-returns',
         ]));
@@ -54,6 +64,8 @@ class SupplierReturnController extends Controller
 
     public function destroy(Returns $supplier_return): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->supplierReturnService->trash($supplier_return, auth()->user());
 
         return back()->with('success', 'Supplier return dipindahkan ke recycle bin. Batch yang diarsipkan sudah dipulihkan kembali.');
@@ -61,6 +73,8 @@ class SupplierReturnController extends Controller
 
     public function restore(int $supplier_return): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->supplierReturnService->restore($supplier_return, auth()->user());
 
         return back()->with('success', 'Supplier return berhasil dipulihkan. Batch aktif diarsipkan kembali dan stok product disesuaikan.');
@@ -68,6 +82,8 @@ class SupplierReturnController extends Controller
 
     public function forceDelete(int $supplier_return): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->supplierReturnService->forceDelete($supplier_return);
 
         return back()->with('success', 'Supplier return berhasil dihapus permanen.');

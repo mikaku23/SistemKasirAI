@@ -18,6 +18,8 @@ class RoleController extends Controller
 
     public function index(): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.roles.index', array_merge($this->roleService->indexData(), [
             'menu' => 'roles',
         ]));
@@ -25,6 +27,8 @@ class RoleController extends Controller
 
     public function recycle(): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.roles.recycle', array_merge($this->roleService->indexData(), [
             'menu' => 'roles',
         ]));
@@ -32,6 +36,8 @@ class RoleController extends Controller
 
     public function create(): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.roles.create', [
             'menu' => 'roles',
         ]);
@@ -39,6 +45,8 @@ class RoleController extends Controller
 
     public function store(RoleStoreRequest $request): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->roleService->store($request->validated());
 
         return redirect()
@@ -48,6 +56,8 @@ class RoleController extends Controller
 
     public function show(Role $role): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.roles.show', [
             'menu' => 'roles',
             'role' => $role,
@@ -56,6 +66,8 @@ class RoleController extends Controller
 
     public function edit(Role $role): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.roles.edit', [
             'menu' => 'roles',
             'role' => $role,
@@ -64,6 +76,8 @@ class RoleController extends Controller
 
     public function update(RoleUpdateRequest $request, Role $role): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->roleService->update($role, $request->validated());
 
         return redirect()
@@ -73,6 +87,8 @@ class RoleController extends Controller
 
     public function destroy(Role $role): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->roleService->trash($role);
 
         return back()->with('success', 'Role dipindahkan ke recycle bin.');
@@ -80,6 +96,8 @@ class RoleController extends Controller
 
     public function restore(int $role): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->roleService->restore($role);
 
         return back()->with('success', 'Role berhasil dipulihkan.');
@@ -87,6 +105,8 @@ class RoleController extends Controller
 
     public function forceDelete(int $role): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->roleService->forceDelete($role);
 
         return back()->with('success', 'Role berhasil dihapus permanen.');

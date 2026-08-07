@@ -2,6 +2,8 @@
 
 namespace App\Http\Services;
 
+
+use App\Support\AuditTrail;
 use App\Models\Categories;
 use App\Models\Location;
 use App\Models\Product;
@@ -20,8 +22,13 @@ use Throwable;
 
 class ProductService
 {
+    use AuditTrail;
+
     public function indexData(): array
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         return [
             'products' => $this->activeProducts(),
             'trashedProducts' => $this->trashedProducts(),
@@ -74,6 +81,9 @@ class ProductService
 
     public function store(array $data, ?UploadedFile $imageFile = null): Product
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $payload = $this->normalizePayload($data);
         $storedImagePath = null;
 
@@ -112,6 +122,9 @@ class ProductService
 
     public function update(Product $product, array $data, ?UploadedFile $imageFile = null): Product
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $payload = $this->normalizePayload($data, $product->id);
         $payload['stock_on_hand'] = $this->refreshStockSnapshot($product->id) ?: null;
         $expirySnapshots = $this->refreshExpirySnapshot($product->id);
@@ -168,11 +181,17 @@ class ProductService
 
     public function trash(Product $product): void
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $this->deleteKeywords($product);
         $product->delete();
     }
 public function restore(int $id): Product
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $product = Product::onlyTrashed()->findOrFail($id);
         $product->restore();
 
@@ -186,6 +205,9 @@ public function restore(int $id): Product
 
     public function forceDelete(int $id): void
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $product = Product::onlyTrashed()->findOrFail($id);
 
         $this->deleteKeywords($product);

@@ -18,6 +18,8 @@ class CategoryController extends Controller
 
     public function index(): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.categories.index', array_merge($this->categoryService->indexData(), [
             'menu' => 'categories',
         ]));
@@ -25,6 +27,8 @@ class CategoryController extends Controller
 
     public function recycle(): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.categories.recycle', array_merge($this->categoryService->indexData(), [
             'menu' => 'categories',
         ]));
@@ -32,6 +36,8 @@ class CategoryController extends Controller
 
     public function create(): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.categories.create', [
             'menu' => 'categories',
         ]);
@@ -39,6 +45,8 @@ class CategoryController extends Controller
 
     public function store(CategoryStoreRequest $request): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->categoryService->store($request->validated());
 
         return redirect()
@@ -48,6 +56,8 @@ class CategoryController extends Controller
 
     public function show(Categories $category): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.categories.show', [
             'menu' => 'categories',
             'category' => $category,
@@ -56,6 +66,8 @@ class CategoryController extends Controller
 
     public function edit(Categories $category): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.categories.edit', [
             'menu' => 'categories',
             'category' => $category,
@@ -64,6 +76,8 @@ class CategoryController extends Controller
 
     public function update(CategoryUpdateRequest $request, Categories $category): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->categoryService->update($category, $request->validated());
 
         return redirect()
@@ -73,6 +87,8 @@ class CategoryController extends Controller
 
     public function destroy(Categories $category): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->categoryService->trash($category);
 
         return back()->with('success', 'Kategori dipindahkan ke recycle bin.');
@@ -80,6 +96,8 @@ class CategoryController extends Controller
 
     public function restore(int $category): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->categoryService->restore($category);
 
         return back()->with('success', 'Kategori berhasil dipulihkan.');
@@ -87,6 +105,8 @@ class CategoryController extends Controller
 
     public function forceDelete(int $category): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->categoryService->forceDelete($category);
 
         return back()->with('success', 'Kategori berhasil dihapus permanen.');

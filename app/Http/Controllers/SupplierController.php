@@ -18,6 +18,8 @@ class SupplierController extends Controller
 
     public function index(): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.suppliers.index', array_merge($this->supplierService->indexData(), [
             'menu' => 'suppliers',
         ]));
@@ -25,6 +27,8 @@ class SupplierController extends Controller
 
     public function recycle(): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.suppliers.recycle', array_merge($this->supplierService->indexData(), [
             'menu' => 'suppliers',
         ]));
@@ -32,6 +36,8 @@ class SupplierController extends Controller
 
     public function create(): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.suppliers.create', [
             'menu' => 'suppliers',
         ]);
@@ -39,6 +45,8 @@ class SupplierController extends Controller
 
     public function store(SupplierStoreRequest $request): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->supplierService->store($request->validated());
 
         return redirect()
@@ -48,6 +56,8 @@ class SupplierController extends Controller
 
     public function show(Supplier $supplier): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.suppliers.show', [
             'menu' => 'suppliers',
             'supplier' => $this->supplierService->payload($supplier),
@@ -56,6 +66,8 @@ class SupplierController extends Controller
 
     public function edit(Supplier $supplier): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.suppliers.edit', [
             'menu' => 'suppliers',
             'supplier' => $this->supplierService->payload($supplier),
@@ -64,6 +76,8 @@ class SupplierController extends Controller
 
     public function update(SupplierUpdateRequest $request, Supplier $supplier): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->supplierService->update($supplier, $request->validated());
 
         return redirect()
@@ -73,6 +87,8 @@ class SupplierController extends Controller
 
     public function destroy(Supplier $supplier): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->supplierService->trash($supplier);
 
         return back()->with('success', 'Supplier dipindahkan ke recycle bin.');
@@ -80,6 +96,8 @@ class SupplierController extends Controller
 
     public function restore(int $supplier): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->supplierService->restore($supplier);
 
         return back()->with('success', 'Supplier berhasil dipulihkan.');
@@ -87,6 +105,8 @@ class SupplierController extends Controller
 
     public function forceDelete(int $supplier): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->supplierService->forceDelete($supplier);
 
         return back()->with('success', 'Supplier berhasil dihapus permanen.');

@@ -2,6 +2,8 @@
 
 namespace App\Http\Services;
 
+
+use App\Support\AuditTrail;
 use App\Models\Location;
 use App\Models\Product;
 use App\Models\StockBatches;
@@ -17,8 +19,13 @@ use Throwable;
 
 class StockBatchService
 {
+    use AuditTrail;
+
     public function indexData(): array
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $activeBatches = $this->activeBatches();
 
         return [
@@ -83,6 +90,9 @@ class StockBatchService
 
     public function store(array $data): StockBatches
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $payload = $this->normalizePayload($data);
 
         return DB::transaction(function () use ($payload) {
@@ -154,6 +164,9 @@ class StockBatchService
 
     public function update(StockBatches $stockBatch, array $data): StockBatches
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $original = $stockBatch->fresh();
         $payload = $this->normalizePayload($data, $original);
 
@@ -196,6 +209,9 @@ class StockBatchService
 
     public function trash(StockBatches $stockBatch): void
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         if ((int) $stockBatch->qty_remaining > 0) {
             throw ValidationException::withMessages([
                 'stock_batch' => 'Batch dengan stok aktif tidak bisa dihapus. Kosongkan sisa batch terlebih dahulu melalui proses yang sah.',
@@ -210,6 +226,9 @@ class StockBatchService
 
     public function restore(int $id): StockBatches
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $stockBatch = StockBatches::onlyTrashed()->findOrFail($id);
         $stockBatch->restore();
 
@@ -225,6 +244,9 @@ class StockBatchService
 
     public function forceDelete(int $id): void
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $stockBatch = StockBatches::onlyTrashed()->findOrFail($id);
 
         if ((int) $stockBatch->qty_remaining > 0) {

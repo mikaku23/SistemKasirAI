@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DiscountSettingController;
@@ -13,6 +14,7 @@ use App\Http\Controllers\StockBatchController;
 use App\Http\Controllers\StockMovementController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\SupplierReturnController;
+use App\Http\Controllers\SystemLogController;
 use App\Http\Controllers\TaxSettingController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\UnitController;
@@ -157,3 +159,9 @@ Route::get('stock-movements', [StockMovementController::class, 'index'])->name('
 Route::get('stock-movements/{stockMovement}', [StockMovementController::class, 'show'])
     ->whereNumber('stockMovement')
     ->name('stock-movements.show');
+    
+Route::get('/activity-logs', [ActivityLogController::class, 'index'])->name('activity-logs.index');
+Route::get('/activity-logs/show', [ActivityLogController::class, 'show'])->name('activity-logs.show');
+
+Route::get('/system-logs', [SystemLogController::class, 'index'])->name('system-logs.index');
+Route::get('/system-logs/show', [SystemLogController::class, 'show'])->name('system-logs.show');

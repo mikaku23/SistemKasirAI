@@ -18,6 +18,8 @@ class LocationController extends Controller
 
     public function index(): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.locations.index', array_merge($this->locationService->indexData(), [
             'menu' => 'locations',
         ]));
@@ -25,6 +27,8 @@ class LocationController extends Controller
 
     public function recycle(): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.locations.recycle', array_merge($this->locationService->indexData(), [
             'menu' => 'locations',
         ]));
@@ -32,6 +36,8 @@ class LocationController extends Controller
 
     public function create(): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.locations.create', [
             'menu' => 'locations',
         ]);
@@ -39,6 +45,8 @@ class LocationController extends Controller
 
     public function store(LocationStoreRequest $request): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->locationService->store($request->validated());
 
         return redirect()
@@ -48,6 +56,8 @@ class LocationController extends Controller
 
     public function show(Location $location): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.locations.show', array_merge($this->locationService->showData($location), [
             'menu' => 'locations',
             'location' => $location,
@@ -56,6 +66,8 @@ class LocationController extends Controller
 
     public function edit(Location $location): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.locations.edit', array_merge($this->locationService->showData($location), [
             'menu' => 'locations',
             'location' => $location,
@@ -64,6 +76,8 @@ class LocationController extends Controller
 
     public function update(LocationUpdateRequest $request, Location $location): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->locationService->update($location, $request->validated());
 
         return redirect()
@@ -73,6 +87,8 @@ class LocationController extends Controller
 
     public function destroy(Location $location): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->locationService->trash($location);
 
         return back()->with('success', 'Location dipindahkan ke recycle bin.');
@@ -80,6 +96,8 @@ class LocationController extends Controller
 
     public function restore(int $location): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->locationService->restore($location);
 
         return back()->with('success', 'Location berhasil dipulihkan.');
@@ -87,6 +105,8 @@ class LocationController extends Controller
 
     public function forceDelete(int $location): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->locationService->forceDelete($location);
 
         return back()->with('success', 'Location berhasil dihapus permanen.');

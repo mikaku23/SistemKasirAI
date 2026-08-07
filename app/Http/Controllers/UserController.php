@@ -18,6 +18,8 @@ class UserController extends Controller
 
     public function index(): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.users.index', array_merge($this->userService->indexData(), [
             'menu' => 'users',
         ]));
@@ -25,6 +27,8 @@ class UserController extends Controller
 
     public function recycle(): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.users.recycle', array_merge($this->userService->indexData(), [
             'menu' => 'users',
         ]));
@@ -32,6 +36,8 @@ class UserController extends Controller
 
     public function create(): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.users.create', array_merge($this->userService->formData(), [
             'menu' => 'users',
         ]));
@@ -39,6 +45,8 @@ class UserController extends Controller
 
     public function store(UserStoreRequest $request): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->userService->store($request->validated(), $request->file('avatar'));
 
         return redirect()
@@ -48,6 +56,8 @@ class UserController extends Controller
 
     public function show(User $user): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.users.show', array_merge($this->userService->formData(), [
             'menu' => 'users',
             'user' => $this->userService->payload($user),
@@ -56,6 +66,8 @@ class UserController extends Controller
 
     public function edit(User $user): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.users.edit', array_merge($this->userService->formData(), [
             'menu' => 'users',
             'user' => $this->userService->payload($user),
@@ -64,6 +76,8 @@ class UserController extends Controller
 
     public function update(UserUpdateRequest $request, User $user): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->userService->update($user, $request->validated(), $request->file('avatar'));
 
         return redirect()
@@ -73,6 +87,8 @@ class UserController extends Controller
 
     public function destroy(User $user): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->userService->trash($user);
 
         return back()->with('success', 'User dipindahkan ke recycle bin.');
@@ -80,6 +96,8 @@ class UserController extends Controller
 
     public function restore(int $user): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->userService->restore($user);
 
         return back()->with('success', 'User berhasil dipulihkan.');
@@ -87,6 +105,8 @@ class UserController extends Controller
 
     public function forceDelete(int $user): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->userService->forceDelete($user);
 
         return back()->with('success', 'User berhasil dihapus permanen.');

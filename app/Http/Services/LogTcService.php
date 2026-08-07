@@ -2,6 +2,8 @@
 
 namespace App\Http\Services;
 
+
+use App\Support\AuditTrail;
 use App\Models\Location;
 use App\Models\Transaction;
 use App\Models\User;
@@ -13,8 +15,13 @@ use Illuminate\Support\Str;
 
 class LogTcService
 {
+    use AuditTrail;
+
     public function indexData(array $filters = []): array
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $filters = $this->normalizeFilters($filters);
         $query = $this->buildFilteredQuery($filters);
 
@@ -45,6 +52,9 @@ class LogTcService
 
     public function showData(Transaction $transaction): array
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $transaction->loadMissing([
             'location',
             'cashier',

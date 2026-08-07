@@ -2,6 +2,8 @@
 
 namespace App\Http\Services;
 
+
+use App\Support\AuditTrail;
 use App\Models\Location;
 use App\Models\Product;
 use App\Models\ReturnItem;
@@ -18,8 +20,13 @@ use Illuminate\Validation\ValidationException;
 
 class SupplierReturnService
 {
+    use AuditTrail;
+
     public function indexData(): array
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $returns = $this->activeReturns();
 
         return [
@@ -98,6 +105,9 @@ class SupplierReturnService
 
     public function showData(Returns $return): array
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $return->loadMissing(['supplier', 'location', 'user', 'items.product.category', 'items.stockBatch', 'stockMovements.stockBatch']);
 
         return [
@@ -114,6 +124,9 @@ class SupplierReturnService
 
     public function store(array $data, ?User $user = null): Returns
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $payload = $this->normalizePayload($data);
 
         return DB::transaction(function () use ($payload, $user) {
@@ -288,6 +301,9 @@ class SupplierReturnService
 
     public function trash(Returns $return, ?User $user = null): void
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $return->loadMissing(['supplier', 'location', 'user', 'items.product.category', 'items.stockBatch']);
 
         DB::transaction(function () use ($return, $user) {
@@ -365,6 +381,9 @@ class SupplierReturnService
 
     public function restore(int $id, ?User $user = null): Returns
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         return DB::transaction(function () use ($id, $user) {
             $return = Returns::onlyTrashed()
                 ->with(['supplier', 'location', 'user', 'items.product.category', 'items.stockBatch'])
@@ -445,6 +464,9 @@ class SupplierReturnService
 
     public function forceDelete(int $id): void
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $return = Returns::onlyTrashed()->findOrFail($id);
         $return->forceDelete();
     }

@@ -17,21 +17,29 @@ class DiscountSettingController extends Controller
 
     public function index(): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.discount-settings.index', array_merge($this->discountSettingService->indexData(), ['menu' => 'discount-settings']));
     }
 
     public function recycle(): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.discount-settings.recycle', array_merge($this->discountSettingService->indexData(), ['menu' => 'discount-settings']));
     }
 
     public function create(): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.discount-settings.create', ['menu' => 'discount-settings']);
     }
 
     public function store(DiscountSettingStoreRequest $request): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $setting = $this->discountSettingService->store($request->validated());
 
         return redirect()->route('discount-settings.index')
@@ -41,16 +49,22 @@ class DiscountSettingController extends Controller
 
     public function show(DiscountSetting $discountSetting): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.discount-settings.show', ['menu' => 'discount-settings', 'discountSetting' => $discountSetting]);
     }
 
     public function edit(DiscountSetting $discountSetting): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.discount-settings.edit', ['menu' => 'discount-settings', 'discountSetting' => $discountSetting]);
     }
 
     public function update(DiscountSettingUpdateRequest $request, DiscountSetting $discountSetting): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->discountSettingService->update($discountSetting, $request->validated());
 
         return redirect()->route('discount-settings.show', $discountSetting->id)
@@ -59,18 +73,24 @@ class DiscountSettingController extends Controller
 
     public function destroy(DiscountSetting $discountSetting): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->discountSettingService->trash($discountSetting);
         return back()->with('success', 'Diskon dipindahkan ke recycle bin.');
     }
 
     public function restore(int $discount_setting): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->discountSettingService->restore($discount_setting);
         return back()->with('success', 'Diskon berhasil dipulihkan.');
     }
 
     public function forceDelete(int $discount_setting): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->discountSettingService->forceDelete($discount_setting);
         return back()->with('success', 'Diskon berhasil dihapus permanen.');
     }

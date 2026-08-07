@@ -2,6 +2,8 @@
 
 namespace App\Http\Services;
 
+
+use App\Support\AuditTrail;
 use App\Models\Location;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
@@ -10,8 +12,13 @@ use Illuminate\Validation\ValidationException;
 
 class LocationService
 {
+    use AuditTrail;
+
     public function indexData(): array
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         return [
             'locations' => $this->activeLocations(),
             'trashedLocations' => $this->trashedLocations(),
@@ -66,6 +73,9 @@ class LocationService
 
     public function showData(Location $location): array
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         return [
             'locationUsage' => $this->usageCounts($location),
             'locationPayload' => $this->payload($location),
@@ -74,6 +84,9 @@ class LocationService
 
     public function store(array $data): Location
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $payload = $this->normalizePayload($data);
 
         return DB::transaction(function () use ($payload) {
@@ -85,6 +98,9 @@ class LocationService
 
     public function update(Location $location, array $data): Location
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $payload = $this->normalizePayload($data, $location);
 
         return DB::transaction(function () use ($location, $payload) {
@@ -101,6 +117,9 @@ class LocationService
 
     public function trash(Location $location): void
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         if ($this->hasOperationalUsage($location)) {
             throw ValidationException::withMessages([
                 'location' => 'Location ini masih dipakai oleh data operasional. Pindahkan referensi dulu sebelum menghapus.',
@@ -112,6 +131,9 @@ class LocationService
 
     public function restore(int $id): Location
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $location = Location::onlyTrashed()->findOrFail($id);
         $location->restore();
 
@@ -120,6 +142,9 @@ class LocationService
 
     public function forceDelete(int $id): void
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $location = Location::onlyTrashed()->findOrFail($id);
 
         if ($this->hasOperationalUsage($location)) {

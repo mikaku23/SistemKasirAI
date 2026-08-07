@@ -18,6 +18,8 @@ class StockBatchController extends Controller
 
     public function index(): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.stock-batches.index', array_merge($this->stockBatchService->indexData(), [
             'menu' => 'stock-batches',
         ]));
@@ -25,6 +27,8 @@ class StockBatchController extends Controller
 
     public function recycle(): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.stock-batches.recycle', array_merge($this->stockBatchService->indexData(), [
             'menu' => 'stock-batches',
         ]));
@@ -32,6 +36,8 @@ class StockBatchController extends Controller
 
     public function create(): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.stock-batches.create', array_merge($this->stockBatchService->referenceData(), [
             'menu' => 'stock-batches',
         ]));
@@ -39,6 +45,8 @@ class StockBatchController extends Controller
 
     public function store(StockBatchStoreRequest $request): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->stockBatchService->store($request->validated());
 
         return redirect()
@@ -48,6 +56,8 @@ class StockBatchController extends Controller
 
     public function show(StockBatches $stock_batch): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.stock-batches.show', array_merge($this->stockBatchService->referenceData(), [
             'menu' => 'stock-batches',
             'stockBatch' => $stock_batch->load(['product.category', 'product.unit', 'supplier', 'location', 'receiver']),
@@ -56,6 +66,8 @@ class StockBatchController extends Controller
 
     public function edit(StockBatches $stock_batch): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.stock-batches.edit', array_merge($this->stockBatchService->referenceData(), [
             'menu' => 'stock-batches',
             'stockBatch' => $stock_batch->load(['product.category', 'product.unit', 'supplier', 'location', 'receiver']),
@@ -64,6 +76,8 @@ class StockBatchController extends Controller
 
     public function update(StockBatchUpdateRequest $request, StockBatches $stock_batch): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->stockBatchService->update($stock_batch, $request->validated());
 
         return redirect()
@@ -73,6 +87,8 @@ class StockBatchController extends Controller
 
     public function destroy(StockBatches $stock_batch): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->stockBatchService->trash($stock_batch);
 
         return back()->with('success', 'Batch stok dipindahkan ke recycle bin.');
@@ -80,6 +96,8 @@ class StockBatchController extends Controller
 
     public function restore(int $stock_batch): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->stockBatchService->restore($stock_batch);
 
         return back()->with('success', 'Batch stok berhasil dipulihkan.');
@@ -87,6 +105,8 @@ class StockBatchController extends Controller
 
     public function forceDelete(int $stock_batch): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->stockBatchService->forceDelete($stock_batch);
 
         return back()->with('success', 'Batch stok berhasil dihapus permanen.');

@@ -18,6 +18,8 @@ class TaxSettingController extends Controller
 
     public function index(): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.tax-settings.index', array_merge($this->taxSettingService->indexData(), [
             'menu' => 'tax-settings',
         ]));
@@ -25,6 +27,8 @@ class TaxSettingController extends Controller
 
     public function recycle(): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.tax-settings.recycle', array_merge($this->taxSettingService->indexData(), [
             'menu' => 'tax-settings',
         ]));
@@ -32,6 +36,8 @@ class TaxSettingController extends Controller
 
     public function create(): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.tax-settings.create', [
             'menu' => 'tax-settings',
         ]);
@@ -39,6 +45,8 @@ class TaxSettingController extends Controller
 
     public function store(TaxSettingStoreRequest $request): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->taxSettingService->store($request->validated());
 
         return redirect()
@@ -48,6 +56,8 @@ class TaxSettingController extends Controller
 
     public function show(TaxSetting $tax_setting): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.tax-settings.show', [
             'menu' => 'tax-settings',
             'taxSetting' => $tax_setting,
@@ -56,6 +66,8 @@ class TaxSettingController extends Controller
 
     public function edit(TaxSetting $tax_setting): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.tax-settings.edit', [
             'menu' => 'tax-settings',
             'taxSetting' => $tax_setting,
@@ -64,6 +76,8 @@ class TaxSettingController extends Controller
 
     public function update(TaxSettingUpdateRequest $request, TaxSetting $tax_setting): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->taxSettingService->update($tax_setting, $request->validated());
 
         return redirect()
@@ -73,6 +87,8 @@ class TaxSettingController extends Controller
 
     public function destroy(TaxSetting $tax_setting): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->taxSettingService->trash($tax_setting);
 
         return back()->with('success', 'Setting pajak dipindahkan ke recycle bin.');
@@ -80,6 +96,8 @@ class TaxSettingController extends Controller
 
     public function restore(int $tax_setting): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->taxSettingService->restore($tax_setting);
 
         return back()->with('success', 'Setting pajak berhasil dipulihkan.');
@@ -87,6 +105,8 @@ class TaxSettingController extends Controller
 
     public function forceDelete(int $tax_setting): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->taxSettingService->forceDelete($tax_setting);
 
         return back()->with('success', 'Setting pajak berhasil dihapus permanen.');

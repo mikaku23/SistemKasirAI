@@ -17,6 +17,8 @@ class StockOutController extends Controller
 
     public function index(): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.stock-outs.index', array_merge($this->stockOutService->indexData(), [
             'menu' => 'stock-outs',
         ]));
@@ -24,6 +26,8 @@ class StockOutController extends Controller
 
     public function recycle(): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.stock-outs.recycle', array_merge($this->stockOutService->indexData(), [
             'menu' => 'stock-outs',
         ]));
@@ -31,6 +35,8 @@ class StockOutController extends Controller
 
     public function create(): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.stock-outs.create', array_merge($this->stockOutService->referenceData(), [
             'menu' => 'stock-outs',
         ]));
@@ -38,6 +44,8 @@ class StockOutController extends Controller
 
     public function store(StockOutStoreRequest $request): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->stockOutService->store($request->validated(), auth()->user());
 
         return redirect()
@@ -47,6 +55,8 @@ class StockOutController extends Controller
 
     public function show(Sale $stock_out): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.stock-outs.show', [
             'menu' => 'stock-outs',
             'sale' => $stock_out->load(['location', 'cashier', 'items.product', 'items.stockBatch']),
@@ -55,6 +65,8 @@ class StockOutController extends Controller
 
     public function destroy(Sale $stock_out): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->stockOutService->trash($stock_out);
 
         return back()->with('success', 'Penjualan dipindahkan ke recycle bin dan stok sudah dipulihkan.');
@@ -62,6 +74,8 @@ class StockOutController extends Controller
 
     public function restore(int $sale): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->stockOutService->restore($sale);
 
         return back()->with('success', 'Penjualan berhasil dipulihkan dan stok dikurangi kembali.');
@@ -69,6 +83,8 @@ class StockOutController extends Controller
 
     public function forceDelete(int $sale): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->stockOutService->forceDelete($sale);
 
         return back()->with('success', 'Data penjualan berhasil dihapus permanen.');

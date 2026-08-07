@@ -2,6 +2,8 @@
 
 namespace App\Http\Services;
 
+
+use App\Support\AuditTrail;
 use App\Models\Categories;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
@@ -10,8 +12,13 @@ use Illuminate\Validation\ValidationException;
 
 class CategoryService
 {
+    use AuditTrail;
+
     public function indexData(): array
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         return [
             'categories' => $this->activeCategories(),
             'trashedCategories' => $this->trashedCategories(),
@@ -45,6 +52,9 @@ class CategoryService
 
     public function store(array $data): Categories
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $payload = $this->normalizePayload($data);
 
         return DB::transaction(function () use ($payload) {
@@ -57,6 +67,9 @@ class CategoryService
 
     public function update(Categories $category, array $data): Categories
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $payload = $this->normalizePayload($data);
 
         return DB::transaction(function () use ($category, $payload) {
@@ -72,6 +85,9 @@ class CategoryService
 
     public function trash(Categories $category): void
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         if ($category->products()->whereNull('deleted_at')->exists()) {
             throw ValidationException::withMessages([
                 'category' => 'Kategori ini masih dipakai oleh produk aktif. Pindahkan produk ke kategori lain sebelum menghapus.',
@@ -83,6 +99,9 @@ class CategoryService
 
     public function restore(int $id): Categories
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $category = Categories::onlyTrashed()->findOrFail($id);
         $category->restore();
 
@@ -91,6 +110,9 @@ class CategoryService
 
     public function forceDelete(int $id): void
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $category = Categories::onlyTrashed()->findOrFail($id);
 
         if ($category->products()->whereNull('deleted_at')->exists()) {

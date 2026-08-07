@@ -16,6 +16,8 @@ class StockMovementController extends Controller
 
     public function index(StockMovementIndexRequest $request): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.stock-movements.index', array_merge(
             $this->stockMovementService->indexData($request->validated()),
             [
@@ -26,6 +28,8 @@ class StockMovementController extends Controller
 
     public function show(StockMovement $stockMovement): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.stock-movements.show', array_merge(
             $this->stockMovementService->showData($stockMovement),
             [

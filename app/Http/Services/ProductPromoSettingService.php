@@ -2,6 +2,8 @@
 
 namespace App\Http\Services;
 
+
+use App\Support\AuditTrail;
 use App\Models\Product;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
@@ -9,8 +11,13 @@ use Illuminate\Support\Facades\DB;
 
 class ProductPromoSettingService
 {
+    use AuditTrail;
+
     public function indexData(): array
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $this->syncExpiredPromos();
 
         return [
@@ -79,6 +86,9 @@ class ProductPromoSettingService
 
     public function store(array $data): Product
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $product = Product::query()->findOrFail((int) $data['product_id']);
         $payload = $this->normalizePayload($data);
         $payload['promo_discount_amount'] = min((int) $product->sale_price, (int) $payload['promo_discount_amount']);
@@ -95,6 +105,9 @@ class ProductPromoSettingService
 
     public function update(Product $product, array $data): Product
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $payload = $this->normalizePayload($data);
         $payload['promo_discount_amount'] = min((int) $product->sale_price, (int) $payload['promo_discount_amount']);
 
@@ -110,6 +123,9 @@ class ProductPromoSettingService
 
     public function reset(Product $product): Product
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         return DB::transaction(function () use ($product) {
             $product->forceFill([
                 'promo_discount_amount' => 0,

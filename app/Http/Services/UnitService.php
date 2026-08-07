@@ -2,6 +2,8 @@
 
 namespace App\Http\Services;
 
+
+use App\Support\AuditTrail;
 use App\Models\Unit;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
@@ -9,8 +11,13 @@ use Illuminate\Validation\ValidationException;
 
 class UnitService
 {
+    use AuditTrail;
+
     public function indexData(): array
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         return [
             'units' => $this->activeUnits(),
             'trashedUnits' => $this->trashedUnits(),
@@ -44,6 +51,9 @@ class UnitService
 
     public function store(array $data): Unit
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $payload = $this->normalizePayload($data);
 
         return DB::transaction(function () use ($payload) {
@@ -56,6 +66,9 @@ class UnitService
 
     public function update(Unit $unit, array $data): Unit
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $payload = $this->normalizePayload($data);
 
         return DB::transaction(function () use ($unit, $payload) {
@@ -71,6 +84,9 @@ class UnitService
 
     public function trash(Unit $unit): void
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         if ($unit->products()->exists()) {
             throw ValidationException::withMessages([
                 'unit' => 'Unit ini masih dipakai oleh produk. Pindahkan produk ke unit lain sebelum menghapus.',
@@ -82,6 +98,9 @@ class UnitService
 
     public function restore(int $id): Unit
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $unit = Unit::onlyTrashed()->findOrFail($id);
         $unit->restore();
 
@@ -90,6 +109,9 @@ class UnitService
 
     public function forceDelete(int $id): void
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $unit = Unit::onlyTrashed()->findOrFail($id);
 
         if ($unit->products()->exists()) {

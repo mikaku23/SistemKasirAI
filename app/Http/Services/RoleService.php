@@ -2,6 +2,8 @@
 
 namespace App\Http\Services;
 
+
+use App\Support\AuditTrail;
 use App\Models\Role;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
@@ -11,8 +13,13 @@ use RuntimeException;
 
 class RoleService
 {
+    use AuditTrail;
+
     public function indexData(): array
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         return [
             'roles' => $this->activeRoles(),
             'trashedRoles' => $this->trashedRoles(),
@@ -46,6 +53,9 @@ class RoleService
 
     public function store(array $data): Role
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $payload = $this->normalizePayload($data);
 
         return DB::transaction(function () use ($payload) {
@@ -57,6 +67,9 @@ class RoleService
 
     public function update(Role $role, array $data): Role
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $payload = $this->normalizePayload($data);
 
         return DB::transaction(function () use ($role, $payload) {
@@ -71,6 +84,9 @@ class RoleService
 
     public function trash(Role $role): void
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         if ($role->users()->exists()) {
             throw ValidationException::withMessages([
                 'role' => 'Role ini masih dipakai oleh user. Pindahkan user ke role lain sebelum menghapus.',
@@ -82,6 +98,9 @@ class RoleService
 
     public function restore(int $id): Role
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $role = Role::onlyTrashed()->findOrFail($id);
         $role->restore();
 
@@ -90,6 +109,9 @@ class RoleService
 
     public function forceDelete(int $id): void
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $role = Role::onlyTrashed()->findOrFail($id);
 
         if ($role->users()->exists()) {

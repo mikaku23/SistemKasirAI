@@ -2,6 +2,8 @@
 
 namespace App\Http\Services;
 
+
+use App\Support\AuditTrail;
 use App\Models\Supplier;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
@@ -10,8 +12,13 @@ use Illuminate\Validation\ValidationException;
 
 class SupplierService
 {
+    use AuditTrail;
+
     public function indexData(): array
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         return [
             'suppliers' => $this->activeSuppliers(),
             'trashedSuppliers' => $this->trashedSuppliers(),
@@ -47,6 +54,9 @@ class SupplierService
 
     public function store(array $data): Supplier
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $payload = $this->normalizePayload($data);
 
         return DB::transaction(function () use ($payload) {
@@ -58,6 +68,9 @@ class SupplierService
 
     public function update(Supplier $supplier, array $data): Supplier
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $payload = $this->normalizePayload($data);
 
         return DB::transaction(function () use ($supplier, $payload) {
@@ -72,6 +85,9 @@ class SupplierService
 
     public function trash(Supplier $supplier): void
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         if ($this->hasCriticalReferences($supplier->id)) {
             throw ValidationException::withMessages([
                 'supplier' => 'Supplier masih dipakai pada produk, batch stok, atau data retur. Pindahkan referensi terlebih dahulu sebelum menghapus.',
@@ -83,6 +99,9 @@ class SupplierService
 
     public function restore(int $id): Supplier
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $supplier = Supplier::onlyTrashed()->findOrFail($id);
         $supplier->restore();
 
@@ -91,6 +110,9 @@ class SupplierService
 
     public function forceDelete(int $id): void
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $supplier = Supplier::onlyTrashed()->findOrFail($id);
 
         if ($this->hasCriticalReferences($supplier->id)) {

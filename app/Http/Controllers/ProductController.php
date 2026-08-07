@@ -19,6 +19,8 @@ class ProductController extends Controller
 
     public function index(): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.products.index', array_merge($this->productService->indexData(), [
             'menu' => 'products',
         ]));
@@ -26,6 +28,8 @@ class ProductController extends Controller
 
     public function recycle(): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.products.recycle', array_merge($this->productService->indexData(), [
             'menu' => 'products',
         ]));
@@ -33,6 +37,8 @@ class ProductController extends Controller
 
     public function create(): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.products.create', array_merge($this->productService->referenceData(), [
             'menu' => 'products',
         ]));
@@ -40,6 +46,8 @@ class ProductController extends Controller
 
     public function store(ProductStoreRequest $request): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->productService->store($request->validated(), $request->file('image'));
 
         return redirect()
@@ -49,6 +57,8 @@ class ProductController extends Controller
 
     public function show(Product $product): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.products.show', array_merge($this->productService->referenceData(), [
             'menu' => 'products',
             'product' => $product->load(['category', 'unit', 'supplier', 'location']),
@@ -57,6 +67,8 @@ class ProductController extends Controller
 
     public function edit(Product $product): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.products.edit', array_merge($this->productService->referenceData(), [
             'menu' => 'products',
             'product' => $product->load(['category', 'unit', 'supplier', 'location']),
@@ -65,6 +77,8 @@ class ProductController extends Controller
 
     public function update(ProductUpdateRequest $request, Product $product): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->productService->update($product, $request->validated(), $request->file('image'));
 
         return redirect()
@@ -74,6 +88,8 @@ class ProductController extends Controller
 
     public function printBarcode(Product $product)
     {
+        $this->auditActivity(__FUNCTION__);
+
         $product->load(['category', 'unit', 'supplier', 'location']);
 
         $barcodeImage = $this->barcodeImageDataUri((string) $product->barcode);
@@ -97,6 +113,8 @@ class ProductController extends Controller
 
     public function destroy(Product $product): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->productService->trash($product);
 
         return back()->with('success', 'Produk dipindahkan ke recycle bin.');
@@ -104,6 +122,8 @@ class ProductController extends Controller
 
     public function restore(int $product): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->productService->restore($product);
 
         return back()->with('success', 'Produk berhasil dipulihkan.');
@@ -111,6 +131,8 @@ class ProductController extends Controller
 
     public function forceDelete(int $product): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->productService->forceDelete($product);
 
         return back()->with('success', 'Produk berhasil dihapus permanen.');

@@ -2,6 +2,8 @@
 
 namespace App\Http\Services;
 
+
+use App\Support\AuditTrail;
 use App\Models\Location;
 use App\Models\Role;
 use App\Models\User;
@@ -16,8 +18,13 @@ use Illuminate\Validation\ValidationException;
 
 class UserService
 {
+    use AuditTrail;
+
     public function indexData(): array
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         return [
             'users' => $this->activeUsers(),
             'trashedUsers' => $this->trashedUsers(),
@@ -66,6 +73,9 @@ class UserService
 
     public function store(array $data, ?UploadedFile $avatar = null): User
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $payload = $this->normalizePayload($data);
 
         return DB::transaction(function () use ($payload, $avatar) {
@@ -82,6 +92,9 @@ class UserService
 
     public function update(User $user, array $data, ?UploadedFile $avatar = null): User
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $payload = $this->normalizePayload($data, $user);
 
         return DB::transaction(function () use ($user, $payload, $avatar) {
@@ -102,6 +115,9 @@ class UserService
 
     public function trash(User $user): void
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         if ((int) Auth::id() === (int) $user->id) {
             throw ValidationException::withMessages([
                 'user' => 'Anda tidak dapat menghapus akun Anda sendiri.',
@@ -119,6 +135,9 @@ class UserService
 
     public function restore(int $id): User
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $user = User::onlyTrashed()->findOrFail($id);
         $user->restore();
 
@@ -127,6 +146,9 @@ class UserService
 
     public function forceDelete(int $id): void
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $user = User::onlyTrashed()->findOrFail($id);
 
         if ($this->isLastActiveAdmin($user)) {

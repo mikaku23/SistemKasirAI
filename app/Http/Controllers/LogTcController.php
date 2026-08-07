@@ -15,6 +15,8 @@ class LogTcController extends Controller
 
     public function index(LogTcIndexRequest $request): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.log-tc.index', array_merge(
             $this->logTcService->indexData($request->validated()),
             [
@@ -25,6 +27,8 @@ class LogTcController extends Controller
 
     public function show(Transaction $transaction): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.log-tc.show', array_merge(
             $this->logTcService->showData($transaction),
             [

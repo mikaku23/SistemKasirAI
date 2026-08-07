@@ -2,6 +2,8 @@
 
 namespace App\Http\Services;
 
+
+use App\Support\AuditTrail;
 use App\Models\Location;
 use App\Models\Product;
 use App\Models\StockMovement;
@@ -13,8 +15,13 @@ use Illuminate\Support\Facades\DB;
 
 class StockMovementService
 {
+    use AuditTrail;
+
     public function indexData(array $filters = []): array
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $filters = $this->normalizeFilters($filters);
         $rawMode = $this->shouldUseRawMode($filters);
 
@@ -44,6 +51,9 @@ class StockMovementService
 
     public function showData(StockMovement $stockMovement): array
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $stockMovement->loadMissing(['product.category', 'stockBatch', 'location', 'user', 'reference']);
 
         $groupDate = optional($stockMovement->created_at)->toDateString()

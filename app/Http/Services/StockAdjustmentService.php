@@ -2,6 +2,8 @@
 
 namespace App\Http\Services;
 
+
+use App\Support\AuditTrail;
 use App\Models\Location;
 use App\Models\Product;
 use App\Models\StockAdjustment;
@@ -16,8 +18,13 @@ use Illuminate\Validation\ValidationException;
 
 class StockAdjustmentService
 {
+    use AuditTrail;
+
     public function indexData(): array
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $adjustments = $this->activeAdjustments();
 
         return [
@@ -65,6 +72,9 @@ class StockAdjustmentService
 
     public function store(array $data, ?User $user = null): StockAdjustment
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $payload = $this->normalizePayload($data);
 
         return DB::transaction(function () use ($payload, $user) {
@@ -121,6 +131,9 @@ class StockAdjustmentService
     }
 public function confirmSystemCorrect(StockAdjustment $adjustment, ?User $user = null): StockAdjustment
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         return DB::transaction(function () use ($adjustment, $user) {
             $adjustment = StockAdjustment::query()->lockForUpdate()->findOrFail($adjustment->id);
 
@@ -143,6 +156,9 @@ public function confirmSystemCorrect(StockAdjustment $adjustment, ?User $user = 
 
     public function applyCorrection(StockAdjustment $adjustment, ?User $user = null): StockAdjustment
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         return DB::transaction(function () use ($adjustment, $user) {
             $adjustment = StockAdjustment::query()->lockForUpdate()->findOrFail($adjustment->id);
 

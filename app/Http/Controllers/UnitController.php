@@ -18,6 +18,8 @@ class UnitController extends Controller
 
     public function index(): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.units.index', array_merge($this->unitService->indexData(), [
             'menu' => 'units',
         ]));
@@ -25,6 +27,8 @@ class UnitController extends Controller
 
     public function recycle(): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.units.recycle', array_merge($this->unitService->indexData(), [
             'menu' => 'units',
         ]));
@@ -32,6 +36,8 @@ class UnitController extends Controller
 
     public function create(): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.units.create', [
             'menu' => 'units',
         ]);
@@ -39,6 +45,8 @@ class UnitController extends Controller
 
     public function store(UnitStoreRequest $request): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->unitService->store($request->validated());
 
         return redirect()
@@ -48,6 +56,8 @@ class UnitController extends Controller
 
     public function show(Unit $unit): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.units.show', [
             'menu' => 'units',
             'unit' => $unit,
@@ -56,6 +66,8 @@ class UnitController extends Controller
 
     public function edit(Unit $unit): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.units.edit', [
             'menu' => 'units',
             'unit' => $unit,
@@ -64,6 +76,8 @@ class UnitController extends Controller
 
     public function update(UnitUpdateRequest $request, Unit $unit): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->unitService->update($unit, $request->validated());
 
         return redirect()
@@ -73,6 +87,8 @@ class UnitController extends Controller
 
     public function destroy(Unit $unit): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->unitService->trash($unit);
 
         return back()->with('success', 'Unit dipindahkan ke recycle bin.');
@@ -80,6 +96,8 @@ class UnitController extends Controller
 
     public function restore(int $unit): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->unitService->restore($unit);
 
         return back()->with('success', 'Unit berhasil dipulihkan.');
@@ -87,6 +105,8 @@ class UnitController extends Controller
 
     public function forceDelete(int $unit): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->unitService->forceDelete($unit);
 
         return back()->with('success', 'Unit berhasil dihapus permanen.');

@@ -2,6 +2,8 @@
 
 namespace App\Http\Services;
 
+
+use App\Support\AuditTrail;
 use App\Models\DiscountSetting;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
@@ -9,8 +11,13 @@ use Illuminate\Support\Facades\DB;
 
 class DiscountSettingService
 {
+    use AuditTrail;
+
     public function indexData(): array
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $this->syncExpiredDiscountSettings();
 
         return [
@@ -63,6 +70,9 @@ class DiscountSettingService
 
     public function store(array $data): DiscountSetting
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $payload = $this->normalizePayload($data, true);
 
         return DB::transaction(function () use ($payload) {
@@ -82,6 +92,9 @@ class DiscountSettingService
 
     public function update(DiscountSetting $discountSetting, array $data): DiscountSetting
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $payload = $this->normalizePayload($data, false, $discountSetting);
 
         return DB::transaction(function () use ($discountSetting, $payload) {
@@ -102,11 +115,17 @@ class DiscountSettingService
 
     public function trash(DiscountSetting $discountSetting): void
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $discountSetting->delete();
     }
 
     public function restore(int $id): DiscountSetting
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $setting = DiscountSetting::onlyTrashed()->findOrFail($id);
         $setting->restore();
 
@@ -117,6 +136,9 @@ class DiscountSettingService
 
     public function forceDelete(int $id): void
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $setting = DiscountSetting::onlyTrashed()->findOrFail($id);
         $setting->forceDelete();
     }

@@ -2,6 +2,8 @@
 
 namespace App\Http\Services;
 
+
+use App\Support\AuditTrail;
 use App\Models\TaxSetting;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
@@ -10,8 +12,13 @@ use Illuminate\Validation\ValidationException;
 
 class TaxSettingService
 {
+    use AuditTrail;
+
     public function indexData(): array
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         return [
             'taxSettings' => $this->activeSettings(),
             'trashedTaxSettings' => $this->trashedSettings(),
@@ -46,6 +53,9 @@ class TaxSettingService
 
     public function store(array $data): TaxSetting
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $payload = $this->normalizePayload($data);
 
         return DB::transaction(function () use ($payload) {
@@ -61,6 +71,9 @@ class TaxSettingService
 
     public function update(TaxSetting $taxSetting, array $data): TaxSetting
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $payload = $this->normalizePayload($data);
 
         return DB::transaction(function () use ($taxSetting, $payload) {
@@ -79,6 +92,9 @@ class TaxSettingService
 
     public function trash(TaxSetting $taxSetting): void
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         if ($taxSetting->transactions()->exists()) {
             throw ValidationException::withMessages([
                 'tax_setting' => 'Setting pajak ini masih dipakai oleh transaksi. Nonaktifkan atau pindahkan dulu.',
@@ -90,6 +106,9 @@ class TaxSettingService
 
     public function restore(int $id): TaxSetting
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $taxSetting = TaxSetting::onlyTrashed()->findOrFail($id);
         $taxSetting->restore();
 
@@ -98,6 +117,9 @@ class TaxSettingService
 
     public function forceDelete(int $id): void
     {
+        $this->auditActivity(__FUNCTION__);
+        $this->auditSystem('info', class_basename(static::class), __FUNCTION__ . ' dipanggil');
+
         $taxSetting = TaxSetting::onlyTrashed()->findOrFail($id);
 
         if ($taxSetting->transactions()->exists()) {

@@ -18,6 +18,8 @@ class ProductPromoSettingController extends Controller
 
     public function index(): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.promo-settings.index', array_merge($this->promoService->indexData(), [
             'menu' => 'promo-settings',
         ]));
@@ -25,6 +27,8 @@ class ProductPromoSettingController extends Controller
 
     public function create(): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         return view('admin.promo-settings.create', array_merge($this->promoService->referenceData(), [
             'menu' => 'promo-settings',
         ]));
@@ -32,6 +36,8 @@ class ProductPromoSettingController extends Controller
 
     public function store(ProductPromoSettingStoreRequest $request): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $product = $this->promoService->store($request->validated());
 
         return redirect()
@@ -41,6 +47,8 @@ class ProductPromoSettingController extends Controller
 
     public function show(Product $product): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         $product->load(['category', 'unit']);
 
         return view('admin.promo-settings.show', [
@@ -52,6 +60,8 @@ class ProductPromoSettingController extends Controller
 
     public function edit(Product $product): View
     {
+        $this->auditActivity(__FUNCTION__);
+
         $product->load(['category', 'unit']);
 
         return view('admin.promo-settings.edit', [
@@ -63,6 +73,8 @@ class ProductPromoSettingController extends Controller
 
     public function update(ProductPromoSettingUpdateRequest $request, Product $product): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->promoService->update($product, $request->validated());
 
         return redirect()
@@ -72,6 +84,8 @@ class ProductPromoSettingController extends Controller
 
     public function destroy(Product $product): RedirectResponse
     {
+        $this->auditActivity(__FUNCTION__);
+
         $this->promoService->reset($product);
 
         return redirect()
