@@ -618,6 +618,36 @@ const navItems = Array.from(document.querySelectorAll(".nav-item"));
         }, 2800);
     }
 
+    function renderFlashToasts() {
+        const flashToasts = Array.isArray(window.__FLASH_TOASTS)
+            ? window.__FLASH_TOASTS
+            : [];
+
+        flashToasts.forEach((entry) => {
+            if (!entry) return;
+            toast(
+                entry.title || "Info",
+                entry.message || "",
+                entry.variant || "info",
+            );
+        });
+
+        window.__FLASH_TOASTS = [];
+    }
+
+    window.addEventListener("app:toast", (event) => {
+        const detail = event?.detail || {};
+        toast(
+            detail.title || "Info",
+            detail.message || "",
+            detail.variant || "info",
+        );
+    });
+
+    window.aiToast = (title, message, variant = "info") => {
+        toast(title, message, variant);
+    };
+
     function openConfirm({
         title,
         message,
@@ -1208,6 +1238,7 @@ const navItems = Array.from(document.querySelectorAll(".nav-item"));
        bindTables();
        bindKeyboard();
        bindSwitches();
+       renderFlashToasts();
    }
 
     window.addEventListener("DOMContentLoaded", init);

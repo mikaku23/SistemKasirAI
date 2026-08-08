@@ -9,7 +9,7 @@ class AiKnowlegdeArticle extends Model
 {
     use SoftDeletes;
 
-    protected $table = 'ai_knowlegde_articles';
+    protected $table = 'ai_knowledge_articles';
 
     protected $fillable = [
         'title',

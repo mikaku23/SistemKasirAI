@@ -20,6 +20,16 @@
             </a>
         </div>
 
+        <div class="nav-group" data-group="ai">
+            <p class="nav-group__label">AI Core</p>
+            <a href="{{ route('ai-core.index') }}" class="nav-item {{ $menu == 'ai-core' ? 'active' : '' }}">
+                <i class="icon fa-solid fa-robot" aria-hidden="true"></i><span>AI Core</span>
+            </a>
+            <a href="{{ route('ai-channels.index') }}" class="nav-item {{ $menu == 'ai-channels' ? 'active' : '' }}">
+                <i class="icon fa-solid fa-diagram-project" aria-hidden="true"></i><span>AI Channels</span>
+            </a>
+        </div>
+
         <div class="nav-group" data-group="user">
             <p class="nav-group__label">Users</p>
             <a href="{{ route('users.index') }}" class="nav-item {{ $menu == 'users' ? 'active' : '' }}">
@@ -84,7 +94,6 @@
                 class="nav-item {{ $menu == 'supplier-returns' ? 'active' : '' }}">
                 <i class="icon fa-solid fa-undo" aria-hidden="true"></i><span>Supplier Returns</span>
             </a>
-
         </div>
 
         <div class="nav-group" data-group="log">
@@ -106,11 +115,7 @@
             <a href="{{ route('visitors.index') }}" class="nav-item {{ $menu == 'visitors' ? 'active' : '' }}">
                 <i class="icon fa-solid fa-right-to-bracket" aria-hidden="true"></i><span>Login Logs</span>
             </a>
-
-
-
         </div>
-
     </nav>
 
     <div class="sidebar__footer glass-card">

@@ -43,10 +43,25 @@ class EnsureRole
             ]);
         }
 
-        if (! empty($roles) && ! in_array($role->name, $roles, true)) {
+        $normalizedUserRole = $this->normalizeRole((string) ($role->slug ?: $role->name));
+        $allowedRoles = collect($roles)
+            ->flatMap(function (string $roleSet): array {
+                return preg_split('/[|,]/', $roleSet, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+            })
+            ->map(fn (string $roleValue): string => $this->normalizeRole($roleValue))
+            ->filter()
+            ->values()
+            ->all();
+
+        if (! empty($allowedRoles) && ! in_array($normalizedUserRole, $allowedRoles, true)) {
             abort(403, 'Anda tidak memiliki akses ke halaman ini.');
         }
 
         return $next($request);
+    }
+
+    protected function normalizeRole(string $role): string
+    {
+        return strtolower(trim(str_replace(['-', '_'], ' ', $role)));
     }
 }
