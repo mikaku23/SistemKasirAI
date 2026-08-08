@@ -6,24 +6,18 @@ use App\Models\AiChannel;
 use App\Models\AiConversation;
 use App\Models\AiConversationMessage;
 use App\Models\AiHandoff;
-use App\Models\AiMessages;
+use App\Models\AiKnowlegdeArticle;
 use App\Models\AiPermission;
 use App\Models\AiSearchLog;
-use App\Models\AiKnowlegdeArticle;
-use App\Models\Location;
 use App\Models\Product;
 use App\Models\Returns;
 use App\Models\StockAdjustment;
 use App\Models\StockBatches;
-use App\Models\StockMovement;
 use App\Models\Transaction;
 use App\Models\User;
 use Carbon\Carbon;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Arr;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
-use Throwable;
+use Illuminate\Support\Facades\Auth;
 
 class AiCoreService
 {
@@ -106,7 +100,7 @@ class AiCoreService
     {
         $this->bootstrap();
 
-        $user ??= auth()->user();
+        $user ??= Auth::user();
         if (! $user) {
             return $this->blockedResponse('guest', 'Anda harus login untuk menggunakan AI Core.');
         }
@@ -212,7 +206,7 @@ class AiCoreService
 
     public function guardCrud(string $module, string $action, array $payload = [], ?User $user = null): array
     {
-        $user ??= auth()->user();
+        $user ??= Auth::user();
 
         $guard = $this->bridge->guard($module, $action, $payload, $user);
 
