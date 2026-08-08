@@ -7,6 +7,7 @@ use App\Http\Requests\SupplierUpdateRequest;
 use App\Http\Services\SupplierService;
 use App\Models\Supplier;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
 class SupplierController extends Controller
@@ -20,6 +21,13 @@ class SupplierController extends Controller
     {
         $this->auditActivity(__FUNCTION__);
 
+        $guard = $this->aiGuard('suppliers', 'index', [], Auth::user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            abort(403, $guard['reason'] ?? 'Akses ditolak oleh AI Core.');
+        }
+
+
         return view('admin.suppliers.index', array_merge($this->supplierService->indexData(), [
             'menu' => 'suppliers',
         ]));
@@ -28,6 +36,13 @@ class SupplierController extends Controller
     public function recycle(): View
     {
         $this->auditActivity(__FUNCTION__);
+
+        $guard = $this->aiGuard('suppliers', 'recycle', [], Auth::user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            abort(403, $guard['reason'] ?? 'Akses ditolak oleh AI Core.');
+        }
+
 
         return view('admin.suppliers.recycle', array_merge($this->supplierService->indexData(), [
             'menu' => 'suppliers',
@@ -38,6 +53,13 @@ class SupplierController extends Controller
     {
         $this->auditActivity(__FUNCTION__);
 
+        $guard = $this->aiGuard('suppliers', 'create', [], Auth::user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            abort(403, $guard['reason'] ?? 'Akses ditolak oleh AI Core.');
+        }
+
+
         return view('admin.suppliers.create', [
             'menu' => 'suppliers',
         ]);
@@ -47,7 +69,14 @@ class SupplierController extends Controller
     {
         $this->auditActivity(__FUNCTION__);
 
-        $this->supplierService->store($request->validated());
+        $guard = $this->aiGuard('suppliers', 'store', $request->validated(), $request->user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            return $this->aiDenyRedirect($guard);
+        }
+
+
+        $this->supplierService->store($guard['payload']);
 
         return redirect()
             ->route('suppliers.index')
@@ -57,6 +86,13 @@ class SupplierController extends Controller
     public function show(Supplier $supplier): View
     {
         $this->auditActivity(__FUNCTION__);
+
+        $guard = $this->aiGuard('suppliers', 'show', ['id' => $supplier->getKey()], Auth::user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            abort(403, $guard['reason'] ?? 'Akses ditolak oleh AI Core.');
+        }
+
 
         return view('admin.suppliers.show', [
             'menu' => 'suppliers',
@@ -68,6 +104,13 @@ class SupplierController extends Controller
     {
         $this->auditActivity(__FUNCTION__);
 
+        $guard = $this->aiGuard('suppliers', 'edit', ['id' => $supplier->getKey()], Auth::user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            abort(403, $guard['reason'] ?? 'Akses ditolak oleh AI Core.');
+        }
+
+
         return view('admin.suppliers.edit', [
             'menu' => 'suppliers',
             'supplier' => $this->supplierService->payload($supplier),
@@ -78,7 +121,14 @@ class SupplierController extends Controller
     {
         $this->auditActivity(__FUNCTION__);
 
-        $this->supplierService->update($supplier, $request->validated());
+        $guard = $this->aiGuard('suppliers', 'update', $request->validated(), $request->user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            return $this->aiDenyRedirect($guard);
+        }
+
+
+        $this->supplierService->update($supplier, $guard['payload']);
 
         return redirect()
             ->route('suppliers.index')
@@ -89,6 +139,13 @@ class SupplierController extends Controller
     {
         $this->auditActivity(__FUNCTION__);
 
+        $guard = $this->aiGuard('suppliers', 'destroy', ['id' => $supplier->getKey()], Auth::user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            return $this->aiDenyRedirect($guard);
+        }
+
+
         $this->supplierService->trash($supplier);
 
         return back()->with('success', 'Supplier dipindahkan ke recycle bin.');
@@ -98,6 +155,13 @@ class SupplierController extends Controller
     {
         $this->auditActivity(__FUNCTION__);
 
+        $guard = $this->aiGuard('suppliers', 'restore', ['id' => $supplier], Auth::user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            return $this->aiDenyRedirect($guard);
+        }
+
+
         $this->supplierService->restore($supplier);
 
         return back()->with('success', 'Supplier berhasil dipulihkan.');
@@ -106,6 +170,13 @@ class SupplierController extends Controller
     public function forceDelete(int $supplier): RedirectResponse
     {
         $this->auditActivity(__FUNCTION__);
+
+        $guard = $this->aiGuard('suppliers', 'forceDelete', ['id' => $supplier], Auth::user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            return $this->aiDenyRedirect($guard);
+        }
+
 
         $this->supplierService->forceDelete($supplier);
 

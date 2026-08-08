@@ -7,6 +7,7 @@ use App\Http\Requests\UnitUpdateRequest;
 use App\Http\Services\UnitService;
 use App\Models\Unit;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
 class UnitController extends Controller
@@ -20,6 +21,13 @@ class UnitController extends Controller
     {
         $this->auditActivity(__FUNCTION__);
 
+        $guard = $this->aiGuard('units', 'index', [], Auth::user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            abort(403, $guard['reason'] ?? 'Akses ditolak oleh AI Core.');
+        }
+
+
         return view('admin.units.index', array_merge($this->unitService->indexData(), [
             'menu' => 'units',
         ]));
@@ -28,6 +36,13 @@ class UnitController extends Controller
     public function recycle(): View
     {
         $this->auditActivity(__FUNCTION__);
+
+        $guard = $this->aiGuard('units', 'recycle', [], Auth::user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            abort(403, $guard['reason'] ?? 'Akses ditolak oleh AI Core.');
+        }
+
 
         return view('admin.units.recycle', array_merge($this->unitService->indexData(), [
             'menu' => 'units',
@@ -38,6 +53,13 @@ class UnitController extends Controller
     {
         $this->auditActivity(__FUNCTION__);
 
+        $guard = $this->aiGuard('units', 'create', [], Auth::user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            abort(403, $guard['reason'] ?? 'Akses ditolak oleh AI Core.');
+        }
+
+
         return view('admin.units.create', [
             'menu' => 'units',
         ]);
@@ -47,7 +69,14 @@ class UnitController extends Controller
     {
         $this->auditActivity(__FUNCTION__);
 
-        $this->unitService->store($request->validated());
+        $guard = $this->aiGuard('units', 'store', $request->validated(), $request->user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            return $this->aiDenyRedirect($guard);
+        }
+
+
+        $this->unitService->store($guard['payload']);
 
         return redirect()
             ->route('units.index')
@@ -57,6 +86,13 @@ class UnitController extends Controller
     public function show(Unit $unit): View
     {
         $this->auditActivity(__FUNCTION__);
+
+        $guard = $this->aiGuard('units', 'show', ['id' => $unit->getKey()], Auth::user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            abort(403, $guard['reason'] ?? 'Akses ditolak oleh AI Core.');
+        }
+
 
         return view('admin.units.show', [
             'menu' => 'units',
@@ -68,6 +104,13 @@ class UnitController extends Controller
     {
         $this->auditActivity(__FUNCTION__);
 
+        $guard = $this->aiGuard('units', 'edit', ['id' => $unit->getKey()], Auth::user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            abort(403, $guard['reason'] ?? 'Akses ditolak oleh AI Core.');
+        }
+
+
         return view('admin.units.edit', [
             'menu' => 'units',
             'unit' => $unit,
@@ -78,7 +121,14 @@ class UnitController extends Controller
     {
         $this->auditActivity(__FUNCTION__);
 
-        $this->unitService->update($unit, $request->validated());
+        $guard = $this->aiGuard('units', 'update', $request->validated(), $request->user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            return $this->aiDenyRedirect($guard);
+        }
+
+
+        $this->unitService->update($unit, $guard['payload']);
 
         return redirect()
             ->route('units.index')
@@ -89,6 +139,13 @@ class UnitController extends Controller
     {
         $this->auditActivity(__FUNCTION__);
 
+        $guard = $this->aiGuard('units', 'destroy', ['id' => $unit->getKey()], Auth::user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            return $this->aiDenyRedirect($guard);
+        }
+
+
         $this->unitService->trash($unit);
 
         return back()->with('success', 'Unit dipindahkan ke recycle bin.');
@@ -98,6 +155,13 @@ class UnitController extends Controller
     {
         $this->auditActivity(__FUNCTION__);
 
+        $guard = $this->aiGuard('units', 'restore', ['id' => $unit], Auth::user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            return $this->aiDenyRedirect($guard);
+        }
+
+
         $this->unitService->restore($unit);
 
         return back()->with('success', 'Unit berhasil dipulihkan.');
@@ -106,6 +170,13 @@ class UnitController extends Controller
     public function forceDelete(int $unit): RedirectResponse
     {
         $this->auditActivity(__FUNCTION__);
+
+        $guard = $this->aiGuard('units', 'forceDelete', ['id' => $unit], Auth::user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            return $this->aiDenyRedirect($guard);
+        }
+
 
         $this->unitService->forceDelete($unit);
 

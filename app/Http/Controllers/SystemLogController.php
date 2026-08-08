@@ -15,6 +15,12 @@ class SystemLogController extends Controller
 
     public function index(SystemLogIndexRequest $request): View
     {
+        $guard = $this->aiGuard('system-logs', 'index', [], $request->user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            abort(403, $guard['reason'] ?? 'Akses ditolak oleh AI Core.');
+        }
+
         return view('admin.system-logs.index', array_merge(
             $this->systemLogService->indexData($request->validated()),
             [
@@ -25,6 +31,12 @@ class SystemLogController extends Controller
 
     public function show(Request $request): View
     {
+        $guard = $this->aiGuard('system-logs', 'show', [], $request->user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            abort(403, $guard['reason'] ?? 'Akses ditolak oleh AI Core.');
+        }
+
         return view('admin.system-logs.show', array_merge(
             $this->systemLogService->showData($request->validate([
                 'date' => ['nullable', 'date'],

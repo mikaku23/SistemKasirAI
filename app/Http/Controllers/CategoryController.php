@@ -47,7 +47,13 @@ class CategoryController extends Controller
     {
         $this->auditActivity(__FUNCTION__);
 
-        $this->categoryService->store($request->validated());
+        $guard = $this->aiGuard('categories', 'store', $request->validated(), $request->user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            return $this->aiDenyRedirect($guard);
+        }
+
+        $this->categoryService->store($guard['payload']);
 
         return redirect()
             ->route('categories.index')
@@ -78,7 +84,13 @@ class CategoryController extends Controller
     {
         $this->auditActivity(__FUNCTION__);
 
-        $this->categoryService->update($category, $request->validated());
+        $guard = $this->aiGuard('categories', 'update', $request->validated(), $request->user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            return $this->aiDenyRedirect($guard);
+        }
+
+        $this->categoryService->update($category, $guard['payload']);
 
         return redirect()
             ->route('categories.index')

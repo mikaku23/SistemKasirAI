@@ -7,6 +7,7 @@ use App\Http\Requests\RoleUpdateRequest;
 use App\Http\Services\RoleService;
 use App\Models\Role;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
 class RoleController extends Controller
@@ -20,6 +21,13 @@ class RoleController extends Controller
     {
         $this->auditActivity(__FUNCTION__);
 
+        $guard = $this->aiGuard('roles', 'index', [], Auth::user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            abort(403, $guard['reason'] ?? 'Akses ditolak oleh AI Core.');
+        }
+
+
         return view('admin.roles.index', array_merge($this->roleService->indexData(), [
             'menu' => 'roles',
         ]));
@@ -28,6 +36,13 @@ class RoleController extends Controller
     public function recycle(): View
     {
         $this->auditActivity(__FUNCTION__);
+
+        $guard = $this->aiGuard('roles', 'recycle', [], Auth::user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            abort(403, $guard['reason'] ?? 'Akses ditolak oleh AI Core.');
+        }
+
 
         return view('admin.roles.recycle', array_merge($this->roleService->indexData(), [
             'menu' => 'roles',
@@ -38,6 +53,13 @@ class RoleController extends Controller
     {
         $this->auditActivity(__FUNCTION__);
 
+        $guard = $this->aiGuard('roles', 'create', [], Auth::user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            abort(403, $guard['reason'] ?? 'Akses ditolak oleh AI Core.');
+        }
+
+
         return view('admin.roles.create', [
             'menu' => 'roles',
         ]);
@@ -47,7 +69,14 @@ class RoleController extends Controller
     {
         $this->auditActivity(__FUNCTION__);
 
-        $this->roleService->store($request->validated());
+        $guard = $this->aiGuard('roles', 'store', $request->validated(), $request->user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            return $this->aiDenyRedirect($guard);
+        }
+
+
+        $this->roleService->store($guard['payload']);
 
         return redirect()
             ->route('roles.index')
@@ -57,6 +86,13 @@ class RoleController extends Controller
     public function show(Role $role): View
     {
         $this->auditActivity(__FUNCTION__);
+
+        $guard = $this->aiGuard('roles', 'show', ['id' => $role->getKey()], Auth::user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            abort(403, $guard['reason'] ?? 'Akses ditolak oleh AI Core.');
+        }
+
 
         return view('admin.roles.show', [
             'menu' => 'roles',
@@ -68,6 +104,13 @@ class RoleController extends Controller
     {
         $this->auditActivity(__FUNCTION__);
 
+        $guard = $this->aiGuard('roles', 'edit', ['id' => $role->getKey()], Auth::user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            abort(403, $guard['reason'] ?? 'Akses ditolak oleh AI Core.');
+        }
+
+
         return view('admin.roles.edit', [
             'menu' => 'roles',
             'role' => $role,
@@ -78,7 +121,14 @@ class RoleController extends Controller
     {
         $this->auditActivity(__FUNCTION__);
 
-        $this->roleService->update($role, $request->validated());
+        $guard = $this->aiGuard('roles', 'update', $request->validated(), $request->user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            return $this->aiDenyRedirect($guard);
+        }
+
+
+        $this->roleService->update($role, $guard['payload']);
 
         return redirect()
             ->route('roles.index')
@@ -89,6 +139,13 @@ class RoleController extends Controller
     {
         $this->auditActivity(__FUNCTION__);
 
+        $guard = $this->aiGuard('roles', 'destroy', ['id' => $role->getKey()], Auth::user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            return $this->aiDenyRedirect($guard);
+        }
+
+
         $this->roleService->trash($role);
 
         return back()->with('success', 'Role dipindahkan ke recycle bin.');
@@ -98,6 +155,13 @@ class RoleController extends Controller
     {
         $this->auditActivity(__FUNCTION__);
 
+        $guard = $this->aiGuard('roles', 'restore', ['id' => $role], Auth::user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            return $this->aiDenyRedirect($guard);
+        }
+
+
         $this->roleService->restore($role);
 
         return back()->with('success', 'Role berhasil dipulihkan.');
@@ -106,6 +170,13 @@ class RoleController extends Controller
     public function forceDelete(int $role): RedirectResponse
     {
         $this->auditActivity(__FUNCTION__);
+
+        $guard = $this->aiGuard('roles', 'forceDelete', ['id' => $role], Auth::user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            return $this->aiDenyRedirect($guard);
+        }
+
 
         $this->roleService->forceDelete($role);
 

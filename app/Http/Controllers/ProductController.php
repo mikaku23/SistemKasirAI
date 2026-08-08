@@ -8,6 +8,7 @@ use App\Http\Services\ProductService;
 use App\Models\Product;
 use Barryvdh\DomPDF\Facade\Pdf as PdfFacade;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
 class ProductController extends Controller
@@ -21,6 +22,13 @@ class ProductController extends Controller
     {
         $this->auditActivity(__FUNCTION__);
 
+        $guard = $this->aiGuard('products', 'index', [], Auth::user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            abort(403, $guard['reason'] ?? 'Akses ditolak oleh AI Core.');
+        }
+
+
         return view('admin.products.index', array_merge($this->productService->indexData(), [
             'menu' => 'products',
         ]));
@@ -29,6 +37,13 @@ class ProductController extends Controller
     public function recycle(): View
     {
         $this->auditActivity(__FUNCTION__);
+
+        $guard = $this->aiGuard('products', 'recycle', [], Auth::user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            abort(403, $guard['reason'] ?? 'Akses ditolak oleh AI Core.');
+        }
+
 
         return view('admin.products.recycle', array_merge($this->productService->indexData(), [
             'menu' => 'products',
@@ -39,6 +54,13 @@ class ProductController extends Controller
     {
         $this->auditActivity(__FUNCTION__);
 
+        $guard = $this->aiGuard('products', 'create', [], Auth::user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            abort(403, $guard['reason'] ?? 'Akses ditolak oleh AI Core.');
+        }
+
+
         return view('admin.products.create', array_merge($this->productService->referenceData(), [
             'menu' => 'products',
         ]));
@@ -48,7 +70,14 @@ class ProductController extends Controller
     {
         $this->auditActivity(__FUNCTION__);
 
-        $this->productService->store($request->validated(), $request->file('image'));
+        $guard = $this->aiGuard('products', 'store', $request->validated(), $request->user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            return $this->aiDenyRedirect($guard);
+        }
+
+
+        $this->productService->store($guard['payload'], $request->file('image'));
 
         return redirect()
             ->route('products.index')
@@ -58,6 +87,13 @@ class ProductController extends Controller
     public function show(Product $product): View
     {
         $this->auditActivity(__FUNCTION__);
+
+        $guard = $this->aiGuard('products', 'show', ['id' => $product->getKey()], Auth::user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            abort(403, $guard['reason'] ?? 'Akses ditolak oleh AI Core.');
+        }
+
 
         return view('admin.products.show', array_merge($this->productService->referenceData(), [
             'menu' => 'products',
@@ -69,6 +105,13 @@ class ProductController extends Controller
     {
         $this->auditActivity(__FUNCTION__);
 
+        $guard = $this->aiGuard('products', 'edit', ['id' => $product->getKey()], Auth::user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            abort(403, $guard['reason'] ?? 'Akses ditolak oleh AI Core.');
+        }
+
+
         return view('admin.products.edit', array_merge($this->productService->referenceData(), [
             'menu' => 'products',
             'product' => $product->load(['category', 'unit', 'supplier', 'location']),
@@ -79,7 +122,14 @@ class ProductController extends Controller
     {
         $this->auditActivity(__FUNCTION__);
 
-        $this->productService->update($product, $request->validated(), $request->file('image'));
+        $guard = $this->aiGuard('products', 'update', $request->validated(), $request->user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            return $this->aiDenyRedirect($guard);
+        }
+
+
+        $this->productService->update($product, $guard['payload'], $request->file('image'));
 
         return redirect()
             ->route('products.index')
@@ -89,6 +139,13 @@ class ProductController extends Controller
     public function printBarcode(Product $product)
     {
         $this->auditActivity(__FUNCTION__);
+
+        $guard = $this->aiGuard('products', 'printBarcode', ['id' => $product->getKey()], Auth::user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            abort(403, $guard['reason'] ?? 'Akses ditolak oleh AI Core.');
+        }
+
 
         $product->load(['category', 'unit', 'supplier', 'location']);
 
@@ -115,6 +172,13 @@ class ProductController extends Controller
     {
         $this->auditActivity(__FUNCTION__);
 
+        $guard = $this->aiGuard('products', 'destroy', ['id' => $product->getKey()], Auth::user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            return $this->aiDenyRedirect($guard);
+        }
+
+
         $this->productService->trash($product);
 
         return back()->with('success', 'Produk dipindahkan ke recycle bin.');
@@ -124,6 +188,13 @@ class ProductController extends Controller
     {
         $this->auditActivity(__FUNCTION__);
 
+        $guard = $this->aiGuard('products', 'restore', ['id' => $product], Auth::user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            return $this->aiDenyRedirect($guard);
+        }
+
+
         $this->productService->restore($product);
 
         return back()->with('success', 'Produk berhasil dipulihkan.');
@@ -132,6 +203,13 @@ class ProductController extends Controller
     public function forceDelete(int $product): RedirectResponse
     {
         $this->auditActivity(__FUNCTION__);
+
+        $guard = $this->aiGuard('products', 'forceDelete', ['id' => $product], Auth::user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            return $this->aiDenyRedirect($guard);
+        }
+
 
         $this->productService->forceDelete($product);
 

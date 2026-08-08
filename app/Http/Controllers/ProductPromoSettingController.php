@@ -7,6 +7,7 @@ use App\Http\Requests\ProductPromoSettingUpdateRequest;
 use App\Http\Services\ProductPromoSettingService;
 use App\Models\Product;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
 class ProductPromoSettingController extends Controller
@@ -20,6 +21,13 @@ class ProductPromoSettingController extends Controller
     {
         $this->auditActivity(__FUNCTION__);
 
+        $guard = $this->aiGuard('promo-settings', 'index', [], Auth::user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            abort(403, $guard['reason'] ?? 'Akses ditolak oleh AI Core.');
+        }
+
+
         return view('admin.promo-settings.index', array_merge($this->promoService->indexData(), [
             'menu' => 'promo-settings',
         ]));
@@ -28,6 +36,13 @@ class ProductPromoSettingController extends Controller
     public function create(): View
     {
         $this->auditActivity(__FUNCTION__);
+
+        $guard = $this->aiGuard('promo-settings', 'create', [], Auth::user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            abort(403, $guard['reason'] ?? 'Akses ditolak oleh AI Core.');
+        }
+
 
         return view('admin.promo-settings.create', array_merge($this->promoService->referenceData(), [
             'menu' => 'promo-settings',
@@ -38,7 +53,14 @@ class ProductPromoSettingController extends Controller
     {
         $this->auditActivity(__FUNCTION__);
 
-        $product = $this->promoService->store($request->validated());
+        $guard = $this->aiGuard('promo-settings', 'store', $request->validated(), $request->user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            return $this->aiDenyRedirect($guard);
+        }
+
+
+        $product = $this->promoService->store($guard['payload']);
 
         return redirect()
             ->route('promo-settings.index', ['product' => $product->id])
@@ -48,6 +70,13 @@ class ProductPromoSettingController extends Controller
     public function show(Product $product): View
     {
         $this->auditActivity(__FUNCTION__);
+
+        $guard = $this->aiGuard('promo-settings', 'show', ['id' => $product->getKey()], Auth::user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            abort(403, $guard['reason'] ?? 'Akses ditolak oleh AI Core.');
+        }
+
 
         $product->load(['category', 'unit']);
 
@@ -62,6 +91,13 @@ class ProductPromoSettingController extends Controller
     {
         $this->auditActivity(__FUNCTION__);
 
+        $guard = $this->aiGuard('promo-settings', 'edit', ['id' => $product->getKey()], Auth::user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            abort(403, $guard['reason'] ?? 'Akses ditolak oleh AI Core.');
+        }
+
+
         $product->load(['category', 'unit']);
 
         return view('admin.promo-settings.edit', [
@@ -75,7 +111,14 @@ class ProductPromoSettingController extends Controller
     {
         $this->auditActivity(__FUNCTION__);
 
-        $this->promoService->update($product, $request->validated());
+        $guard = $this->aiGuard('promo-settings', 'update', $request->validated(), $request->user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            return $this->aiDenyRedirect($guard);
+        }
+
+
+        $this->promoService->update($product, $guard['payload']);
 
         return redirect()
             ->route('promo-settings.show', ['product' => $product->id])
@@ -85,6 +128,13 @@ class ProductPromoSettingController extends Controller
     public function destroy(Product $product): RedirectResponse
     {
         $this->auditActivity(__FUNCTION__);
+
+        $guard = $this->aiGuard('promo-settings', 'destroy', ['id' => $product->getKey()], Auth::user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            return $this->aiDenyRedirect($guard);
+        }
+
 
         $this->promoService->reset($product);
 

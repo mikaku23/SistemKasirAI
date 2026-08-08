@@ -8,6 +8,7 @@ use App\Models\Transaction;
 use Barryvdh\DomPDF\Facade\Pdf as PdfFacade;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
 class TransactionController extends Controller
@@ -20,12 +21,26 @@ class TransactionController extends Controller
     {
         $this->auditActivity(__FUNCTION__);
 
+        $guard = $this->aiGuard('transactions', 'index', [], Auth::user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            abort(403, $guard['reason'] ?? 'Akses ditolak oleh AI Core.');
+        }
+
+
         return view('admin.transactions.index', array_merge($this->transactionService->indexData(), ['menu' => 'transactions']));
     }
 
     public function create(): View
     {
         $this->auditActivity(__FUNCTION__);
+
+        $guard = $this->aiGuard('transactions', 'create', [], Auth::user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            abort(403, $guard['reason'] ?? 'Akses ditolak oleh AI Core.');
+        }
+
 
         return view('admin.transactions.create', array_merge($this->transactionService->referenceData(), ['menu' => 'transactions']));
     }
@@ -34,7 +49,14 @@ class TransactionController extends Controller
     {
         $this->auditActivity(__FUNCTION__);
 
-        $transaction = $this->transactionService->store($request->validated(), auth()->user());
+        $guard = $this->aiGuard('transactions', 'store', $request->validated(), $request->user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            return $this->aiDenyRedirect($guard);
+        }
+
+
+        $transaction = $this->transactionService->store($guard['payload'], Auth::user());
 
         return redirect()->route('transactions.show', $transaction->id)
             ->with('success', 'Transaksi berhasil disimpan.')
@@ -45,6 +67,13 @@ class TransactionController extends Controller
     {
         $this->auditActivity(__FUNCTION__);
 
+        $guard = $this->aiGuard('transactions', 'show', ['id' => $transaction->getKey()], Auth::user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            abort(403, $guard['reason'] ?? 'Akses ditolak oleh AI Core.');
+        }
+
+
         return view('admin.transactions.show', [
             'menu' => 'transactions',
             'transaction' => $transaction->load(['location', 'cashier', 'taxSetting', 'discountSetting', 'items.product', 'items.stockBatch', 'stockMovements.stockBatch']),
@@ -54,6 +83,13 @@ class TransactionController extends Controller
     public function lookupBarcode(string $barcode): JsonResponse
     {
         $this->auditActivity(__FUNCTION__);
+
+        $guard = $this->aiGuard('transactions', 'lookupBarcode', ['barcode' => $barcode], Auth::user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            return response()->json(['message' => $guard['reason'] ?? 'Akses ditolak oleh AI Core.'], 403);
+        }
+
 
         $product = $this->transactionService->findProductByBarcode($barcode);
 
@@ -72,6 +108,13 @@ class TransactionController extends Controller
     public function print(Transaction $transaction)
     {
         $this->auditActivity(__FUNCTION__);
+
+        $guard = $this->aiGuard('transactions', 'print', ['id' => $transaction->getKey()], Auth::user());
+
+        if (! ($guard['allowed'] ?? false)) {
+            abort(403, $guard['reason'] ?? 'Akses ditolak oleh AI Core.');
+        }
+
 
         $transaction->load(['location', 'cashier', 'taxSetting', 'discountSetting', 'items.product', 'items.stockBatch', 'stockMovements.stockBatch']);
 
